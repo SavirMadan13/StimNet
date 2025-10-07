@@ -280,6 +280,168 @@ class DistributedClient:
         
         data = response.json()
         return [JobResult(**job) for job in data]
+    
+    async def execute_script(self, script_content: str, script_type: str = "python", 
+                           parameters: Optional[Dict[str, Any]] = None,
+                           data: Optional[Dict[str, Any]] = None,
+                           files: Optional[List[str]] = None,
+                           timeout: int = 300) -> str:
+        """
+        Execute arbitrary script with optional data and files
+        
+        Args:
+            script_content: The script code to execute
+            script_type: Type of script (python, r, shell, bash, nodejs)
+            parameters: Optional parameters to pass to the script
+            data: Optional JSON data to pass to the script
+            files: Optional list of file paths to upload
+            timeout: Maximum execution time in seconds
+            
+        Returns:
+            Job ID for tracking execution
+        """
+        if not self.session:
+            self.session = httpx.AsyncClient(verify=self.verify_ssl)
+        
+        # Prepare form data
+        form_data = {
+            "script_content": script_content,
+            "script_type": script_type,
+            "timeout": str(timeout)
+        }
+        
+        if parameters:
+            form_data["parameters"] = json.dumps(parameters)
+        
+        if data:
+            form_data["data"] = json.dumps(data)
+        
+        # Prepare files for upload
+        files_to_upload = []
+        if files:
+            for file_path in files:
+                file_path = Path(file_path)
+                if file_path.exists():
+                    files_to_upload.append(
+                        ("files", (file_path.name, open(file_path, "rb"), "application/octet-stream"))
+                    )
+        
+        try:
+            response = await self.session.post(
+                f"{self.base_url}/api/v1/remote/execute-script",
+                data=form_data,
+                files=files_to_upload,
+                headers={"Authorization": f"Bearer {self.auth_token}"} if self.auth_token else {}
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            return result["job_id"]
+            
+        finally:
+            # Close file handles
+            for _, file_tuple in files_to_upload:
+                file_tuple[1].close()
+    
+    async def submit_data_with_script(self, script_content: str, 
+                                    files: List[str],
+                                    parameters: Optional[Dict[str, Any]] = None,
+                                    analysis_type: str = "python") -> str:
+        """
+        Submit data files with analysis script for processing
+        
+        Args:
+            script_content: Analysis script code
+            files: List of data file paths to upload
+            parameters: Optional parameters for the analysis
+            analysis_type: Type of analysis script
+            
+        Returns:
+            Job ID for tracking the analysis
+        """
+        if not self.session:
+            self.session = httpx.AsyncClient(verify=self.verify_ssl)
+        
+        # Prepare form data
+        form_data = {
+            "script_content": script_content,
+            "analysis_type": analysis_type
+        }
+        
+        if parameters:
+            form_data["parameters"] = json.dumps(parameters)
+        
+        # Prepare files for upload
+        files_to_upload = []
+        for file_path in files:
+            file_path = Path(file_path)
+            if file_path.exists():
+                files_to_upload.append(
+                    ("files", (file_path.name, open(file_path, "rb"), "application/octet-stream"))
+                )
+        
+        try:
+            response = await self.session.post(
+                f"{self.base_url}/api/v1/remote/submit-data",
+                data=form_data,
+                files=files_to_upload,
+                headers={"Authorization": f"Bearer {self.auth_token}"} if self.auth_token else {}
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            return result["job_id"]
+            
+        finally:
+            # Close file handles
+            for _, file_tuple in files_to_upload:
+                file_tuple[1].close()
+    
+    async def quick_analysis(self, data: Dict[str, Any], analysis_script: str,
+                           parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Perform quick analysis on JSON data without file upload
+        
+        Args:
+            data: Data to analyze (as JSON-serializable dict)
+            analysis_script: Python script for analysis
+            parameters: Optional parameters for the script
+            
+        Returns:
+            Analysis results directly (no job tracking needed)
+        """
+        if not self.session:
+            self.session = httpx.AsyncClient(verify=self.verify_ssl)
+        
+        payload = {
+            "data": data,
+            "analysis_script": analysis_script
+        }
+        
+        if parameters:
+            payload["parameters"] = parameters
+        
+        response = await self.session.post(
+            f"{self.base_url}/api/v1/remote/quick-analysis",
+            json=payload,
+            headers=self._get_headers()
+        )
+        response.raise_for_status()
+        
+        return response.json()
+    
+    async def get_analysis_templates(self) -> Dict[str, Any]:
+        """Get pre-built analysis templates"""
+        if not self.session:
+            self.session = httpx.AsyncClient(verify=self.verify_ssl)
+        
+        response = await self.session.get(
+            f"{self.base_url}/api/v1/remote/analysis-templates",
+            headers=self._get_headers()
+        )
+        response.raise_for_status()
+        
+        return response.json()
 
 
 # Synchronous wrapper for easier use
@@ -324,6 +486,31 @@ class SyncDistributedClient:
     
     def list_jobs(self, status: Optional[str] = None, limit: int = 100) -> List[JobResult]:
         return asyncio.run(self._run_async(self.client.list_jobs(status, limit)))
+    
+    def execute_script(self, script_content: str, script_type: str = "python", 
+                      parameters: Optional[Dict[str, Any]] = None,
+                      data: Optional[Dict[str, Any]] = None,
+                      files: Optional[List[str]] = None,
+                      timeout: int = 300) -> str:
+        return asyncio.run(self._run_async(
+            self.client.execute_script(script_content, script_type, parameters, data, files, timeout)
+        ))
+    
+    def submit_data_with_script(self, script_content: str, files: List[str],
+                               parameters: Optional[Dict[str, Any]] = None,
+                               analysis_type: str = "python") -> str:
+        return asyncio.run(self._run_async(
+            self.client.submit_data_with_script(script_content, files, parameters, analysis_type)
+        ))
+    
+    def quick_analysis(self, data: Dict[str, Any], analysis_script: str,
+                      parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return asyncio.run(self._run_async(
+            self.client.quick_analysis(data, analysis_script, parameters)
+        ))
+    
+    def get_analysis_templates(self) -> Dict[str, Any]:
+        return asyncio.run(self._run_async(self.client.get_analysis_templates()))
     
     async def _run_async(self, coro):
         """Run async method with proper session management"""
