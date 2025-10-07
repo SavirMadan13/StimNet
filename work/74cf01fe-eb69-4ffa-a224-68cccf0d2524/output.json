@@ -1,0 +1,16 @@
+{
+  "cloudflare_real_execution": true,
+  "sample_size": 150,
+  "age_mean": 43.266666666666666,
+  "sex_distribution": {
+    "F": 82,
+    "M": 68
+  },
+  "diagnosis_counts": {
+    "PD": 59,
+    "ET": 46,
+    "Control": 45
+  },
+  "execution_method": "cloudflare_tunnel_real_processing",
+  "timestamp": "2025-10-07T17:16:39.905811"
+}

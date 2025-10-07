@@ -28,7 +28,7 @@ def main():
     os.makedirs("data", exist_ok=True)
     os.makedirs("work", exist_ok=True)
     
-    print("Starting Distributed Data Access Framework")
+    print("Starting StimNet Research Platform")
     print("=" * 50)
     print(f"Node ID: {os.environ['NODE_ID']}")
     print(f"Institution: {os.environ['INSTITUTION_NAME']}")
@@ -37,7 +37,7 @@ def main():
     
     # Import and initialize the app
     try:
-        from distributed_node.simple_main import app
+        from distributed_node.real_main import app
         from distributed_node.database import init_db
         
         # Initialize database

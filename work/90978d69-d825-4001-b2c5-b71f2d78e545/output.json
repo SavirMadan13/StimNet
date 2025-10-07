@@ -1,0 +1,17 @@
+{
+  "web_interface_test": true,
+  "via_cloudflare": true,
+  "sample_size": 150,
+  "age_mean": 43.266666666666666,
+  "sex_counts": {
+    "F": 82,
+    "M": 68
+  },
+  "diagnosis_counts": {
+    "PD": 59,
+    "ET": 46,
+    "Control": 45
+  },
+  "message": "Web interface working through Cloudflare tunnel!",
+  "timestamp": "2025-10-07T17:23:19.459134"
+}

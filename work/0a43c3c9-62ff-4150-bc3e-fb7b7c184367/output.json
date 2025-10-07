@@ -1,0 +1,25 @@
+{
+  "analysis_type": "demographics",
+  "total_subjects": 150,
+  "age_statistics": {
+    "mean": 43.266666666666666,
+    "std": 14.12060547148853,
+    "min": 5,
+    "max": 81
+  },
+  "sex_distribution": {
+    "F": 82,
+    "M": 68
+  },
+  "diagnosis_breakdown": {
+    "PD": 59,
+    "ET": 46,
+    "Control": 45
+  },
+  "visit_distribution": {
+    "baseline": 67,
+    "6mo": 43,
+    "12mo": 40
+  },
+  "timestamp": "2025-10-07T17:24:10.577376"
+}

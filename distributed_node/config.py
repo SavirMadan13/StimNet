@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """Application settings with environment variable support"""
     
     # Basic server settings
-    app_name: str = "Distributed Node Server"
+    app_name: str = "StimNet Research Platform"
     app_version: str = "1.0.0"
     debug: bool = False
     host: str = "0.0.0.0"
