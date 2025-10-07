@@ -24,6 +24,7 @@ from .models import (
 )
 from .security import verify_token, create_access_token, get_current_user
 from .job_executor import JobExecutor
+from .remote_data_api import router as remote_api_router
 
 # Configure logging
 logging.basicConfig(
@@ -60,6 +61,9 @@ security = HTTPBearer()
 
 # Job executor instance
 job_executor = JobExecutor()
+
+# Include remote API router
+app.include_router(remote_api_router)
 
 # Startup time for uptime calculation
 startup_time = time.time()
