@@ -1,4 +1,4 @@
-# Site Node Starter (No Broker)
+# StimNet
 A minimal, production-leaning scaffold for a **model-to-data** site node. Requesters POST a connectivity map (NIfTI) and get back **aggregate stats only** (n, R, p). No patient-level data leaves the institution.
 
 ## What’s inside
