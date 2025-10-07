@@ -1,0 +1,12 @@
+[
+  {"patient_id": "P001", "treatment": "A", "outcome": 85.2, "age": 45, "baseline": 72.1},
+  {"patient_id": "P002", "treatment": "B", "outcome": 92.7, "age": 52, "baseline": 68.9},
+  {"patient_id": "P003", "treatment": "A", "outcome": 78.4, "age": 38, "baseline": 71.5},
+  {"patient_id": "P004", "treatment": "C", "outcome": 88.9, "age": 61, "baseline": 69.2},
+  {"patient_id": "P005", "treatment": "B", "outcome": 94.1, "age": 47, "baseline": 73.8},
+  {"patient_id": "P006", "treatment": "A", "outcome": 81.6, "age": 55, "baseline": 70.3},
+  {"patient_id": "P007", "treatment": "C", "outcome": 87.3, "age": 42, "baseline": 72.7},
+  {"patient_id": "P008", "treatment": "B", "outcome": 95.8, "age": 49, "baseline": 74.2},
+  {"patient_id": "P009", "treatment": "A", "outcome": 79.2, "age": 58, "baseline": 68.4},
+  {"patient_id": "P010", "treatment": "C", "outcome": 89.7, "age": 44, "baseline": 71.9}
+]

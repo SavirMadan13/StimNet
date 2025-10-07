@@ -23,6 +23,7 @@ from .models import (
     JobStatus, ScriptType
 )
 from .security import create_access_token
+from .remote_data_api import router as remote_router
 
 # Configure logging
 logging.basicConfig(
@@ -52,6 +53,9 @@ app.add_middleware(
 
 # Security
 security = HTTPBearer()
+
+# Include remote data processing router
+app.include_router(remote_router)
 
 # Startup time for uptime calculation
 startup_time = time.time()
