@@ -25,7 +25,7 @@ RUN R -e "install.packages(c( \
 WORKDIR /workspace
 
 # Create non-root user for security
-RUN useradd -m -u 1000 worker
+RUN useradd -m -u 1001 worker
 USER worker
 
 # Default command

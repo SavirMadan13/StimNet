@@ -222,7 +222,8 @@ if [ "$SKIP_DEPS" = false ]; then
     # Install requirements
     if [ -f "requirements.txt" ]; then
         echo -e "${BLUE}   Installing Python packages...${NC}"
-        pip install -q -r requirements.txt
+        pip install -q -r requirements_core.txt
+        pip install -q pandas numpy scipy pydantic-settings requests
     fi
     
     # Install additional packages for tunnel manager
