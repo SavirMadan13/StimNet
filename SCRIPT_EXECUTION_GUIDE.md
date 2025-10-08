@@ -16,7 +16,7 @@ The Script Execution Framework extends your distributed data processing system t
 
 ### 1. Python Scripts
 - **Language**: Python 3.11
-- **Libraries**: pandas, numpy, scipy, matplotlib, seaborn
+- **Libraries**: pandas, numpy, scipy, matplotlib, seaborn, nibabel, nilearn
 - **Use Cases**: Data analysis, statistical computing, machine learning
 
 ### 2. R Scripts
@@ -234,6 +234,8 @@ All scripts have access to these variables:
 - `save_result(key, value)`: Save a result value
 - `load_file(filename)`: Load an uploaded file (auto-detects format)
 - `save_file(filename, content)`: Save content to a file in workspace
+- `load_nifti(path_or_filename)`: Load a NIfTI file from uploads or `/data`, returns `(data, affine)`
+- `get_patient_connectivity_paths(filters=None)`: Get list of patient NIfTI connectivity file paths using site tables
 
 #### R Scripts
 - `save_result(key, value)`: Save a result value

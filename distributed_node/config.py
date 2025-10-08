@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     
     # Docker settings
     docker_registry: str = "localhost:5000"
-    execution_image_python: str = "python:3.11-slim"
+    execution_image_python: str = "local/research-python:latest"
     execution_image_r: str = "r-base:4.3.2"
     
     # Network settings

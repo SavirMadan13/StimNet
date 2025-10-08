@@ -16,6 +16,8 @@ RUN pip install --no-cache-dir \
     seaborn==0.13.0 \
     statsmodels==0.14.0 \
     plotly==5.17.0 \
+    nibabel==5.2.1 \
+    nilearn==0.10.4 \
     jupyter==1.0.0 \
     nbformat==5.9.2 \
     nbconvert==7.11.0

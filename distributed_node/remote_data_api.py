@@ -884,16 +884,19 @@ with open(os.path.join(workspace, "execution_result.json"), "w") as f:
             
             try:
                 container = client.containers.run(
-                    "python:3.11-slim",
+                    settings.execution_image_python,
                     ["python", "/workspace/wrapper.py"],
-                    volumes={workspace: {'bind': '/workspace', 'mode': 'rw'}},
+                    volumes={
+                        workspace: {'bind': '/workspace', 'mode': 'rw'},
+                        os.path.abspath(settings.data_root): {'bind': '/data', 'mode': 'ro'}
+                    },
                     working_dir='/workspace',
                     network_mode='none',  # No network access
                     mem_limit='512m',
                     cpu_count=2,
                     remove=False,
                     detach=True,
-                    environment={'PYTHONPATH': '/workspace'}
+                    environment={'PYTHONPATH': '/workspace', 'DATA_DIR': '/data'}
                 )
                 
                 # Wait for completion with timeout

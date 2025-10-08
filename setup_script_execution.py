@@ -43,7 +43,7 @@ def check_docker():
 def pull_docker_images():
     """Pull necessary Docker images"""
     images = [
-        ("python:3.11-slim", "Python execution environment"),
+        ("python:3.11-slim", "Base Python execution environment"),
         ("r-base:4.3.0", "R execution environment"),
         ("ubuntu:22.04", "Shell script environment"),
         ("node:18-alpine", "Node.js execution environment")
@@ -63,6 +63,29 @@ def pull_docker_images():
     return True
 
 
+def build_python_execution_image():
+    """Build the local Python execution image with scientific/NIfTI stack"""
+    try:
+        print("🏗️  Building local Python execution image (local/research-python:latest)...")
+        dockerfile = os.path.join("docker", "Dockerfile.python")
+        if not os.path.exists(dockerfile):
+            print("⚠️  Dockerfile not found at docker/Dockerfile.python; skipping build")
+            return False
+        client = docker.from_env()
+        image, logs = client.images.build(
+            path=os.path.dirname(dockerfile),
+            dockerfile=os.path.basename(dockerfile),
+            tag="local/research-python:latest",
+            pull=True
+        )
+        # Stream build logs summary
+        print("✅ Built image:", image.tags)
+        return True
+    except Exception as e:
+        print(f"❌ Failed to build Python execution image: {e}")
+        return False
+
+
 def install_python_dependencies():
     """Install required Python packages"""
     requirements = [
@@ -78,7 +101,9 @@ def install_python_dependencies():
         "seaborn",
         "python-jose[cryptography]",
         "passlib[bcrypt]",
-        "python-multipart"
+        "python-multipart",
+        "nibabel",
+        "nilearn"
     ]
     
     print("📦 Installing Python dependencies...")
@@ -130,7 +155,7 @@ MAX_CPU_CORES=2
 MIN_COHORT_SIZE=5
 
 # Docker Images
-EXECUTION_IMAGE_PYTHON=python:3.11-slim
+EXECUTION_IMAGE_PYTHON=local/research-python:latest
 EXECUTION_IMAGE_R=r-base:4.3.0
 
 # Allowed Script Types
