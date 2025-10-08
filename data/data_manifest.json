@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "last_updated": "2025-10-08",
+  "catalogs": [
+    {
+      "id": "clinical_trial_data",
+      "name": "Clinical Trial Data",
+      "description": "Synthetic clinical trial dataset for Parkinson's disease research",
+      "institution": "Default Institution",
+      "data_type": "tabular",
+      "privacy_level": "high",
+      "min_cohort_size": 10,
+      "files": [
+        {
+          "name": "subjects",
+          "path": "data/catalogs/clinical_trial_data/subjects.csv",
+          "type": "csv",
+          "description": "Subject demographics and diagnosis information",
+          "columns": ["subject_id", "age", "sex", "diagnosis", "visit"],
+          "record_count": 150
+        },
+        {
+          "name": "outcomes",
+          "path": "data/catalogs/clinical_trial_data/outcomes.csv",
+          "type": "csv",
+          "description": "Clinical outcomes and UPDRS scores",
+          "columns": ["subject_id", "visit", "UPDRS_total", "UPDRS_motor", "UPDRS_change", "quality_of_life", "treatment_response"],
+          "record_count": 150
+        }
+      ],
+      "metadata": {
+        "study_name": "Parkinson's Disease Progression Study",
+        "date_range": "2015-2023",
+        "total_subjects": 150,
+        "total_visits": 450,
+        "primary_endpoint": "UPDRS score change"
+      }
+    },
+    {
+      "id": "imaging_data",
+      "name": "Imaging Data",
+      "description": "Neuroimaging scan metadata and quality metrics",
+      "institution": "Default Institution",
+      "data_type": "tabular",
+      "privacy_level": "high",
+      "min_cohort_size": 10,
+      "files": [
+        {
+          "name": "scan_metadata",
+          "path": "data/catalogs/imaging_data/scan_metadata.csv",
+          "type": "csv",
+          "description": "MRI scan metadata and quality control metrics",
+          "columns": ["subject_id", "scan_id", "scan_type", "scan_date", "scanner_model", "field_strength", "quality_rating", "motion_score", "file_path"],
+          "record_count": 100
+        }
+      ],
+      "metadata": {
+        "scan_types": ["T1-weighted", "DTI", "fMRI"],
+        "total_scans": 100,
+        "date_range": "2016-2023",
+        "scanner_models": ["Siemens Prisma", "GE Discovery"]
+      }
+    },
+    {
+      "id": "demo_dataset",
+      "name": "Demo Dataset",
+      "description": "Dynamically generated demo data for testing",
+      "institution": "Default Institution",
+      "data_type": "synthetic",
+      "privacy_level": "low",
+      "min_cohort_size": 5,
+      "files": [
+        {
+          "name": "demo_records",
+          "path": "generated",
+          "type": "synthetic",
+          "description": "Dynamically generated test records",
+          "columns": ["id", "value", "category"],
+          "record_count": 50
+        }
+      ],
+      "metadata": {
+        "purpose": "Testing and demonstration",
+        "generated": true
+      }
+    }
+  ]
+}

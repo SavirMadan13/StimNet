@@ -19,8 +19,9 @@ async function loadDataCatalogs() {
         
         catalogs.forEach(catalog => {
             const option = document.createElement('option');
-            option.value = catalog.name;
-            option.textContent = `${catalog.name} (${catalog.description || 'No description'})`;
+            option.value = catalog.id || catalog.name;
+            const recordInfo = catalog.total_records ? ` - ${catalog.total_records} records` : '';
+            option.textContent = `${catalog.name}${recordInfo}`;
             catalogSelect.appendChild(option);
         });
         
@@ -31,14 +32,41 @@ async function loadDataCatalogs() {
         } else {
             let html = '<div class="grid">';
             catalogs.forEach(catalog => {
-                const icon = catalog.name.includes('clinical') ? '🏥' : 
-                           catalog.name.includes('imaging') ? '🧠' : '📊';
-                const recordCount = catalog.record_count || 'Unknown';
+                const icon = catalog.id.includes('clinical') ? '🏥' : 
+                           catalog.id.includes('imaging') ? '🧠' : '📊';
+                const recordCount = catalog.total_records || 'Unknown';
+                
+                // Build files list
+                let filesHtml = '';
+                if (catalog.files && catalog.files.length > 0) {
+                    filesHtml = '<ul style="font-size: 0.85em; margin: 5px 0; padding-left: 20px;">';
+                    catalog.files.forEach(file => {
+                        const count = file.actual_record_count || file.record_count || '?';
+                        const status = file.exists ? '✅' : '❌';
+                        filesHtml += `<li>${status} ${file.name}: ${count} records</li>`;
+                    });
+                    filesHtml += '</ul>';
+                }
+                
+                // Build metadata display
+                let metadataHtml = '';
+                if (catalog.metadata) {
+                    const meta = catalog.metadata;
+                    if (meta.study_name) metadataHtml += `<p style="font-size: 0.85em;"><strong>Study:</strong> ${meta.study_name}</p>`;
+                    if (meta.date_range) metadataHtml += `<p style="font-size: 0.85em;"><strong>Period:</strong> ${meta.date_range}</p>`;
+                }
+                
                 html += `
                     <div>
                         <h4>${icon} ${catalog.name}</h4>
-                        <p><strong>${catalog.description || 'No description'}</strong></p>
-                        <p style="font-size: 0.9em; color: #666;">Type: ${catalog.data_type || 'N/A'}</p>
+                        <p><strong>${catalog.description}</strong></p>
+                        <p style="font-size: 0.9em; color: #666;">
+                            📊 ${recordCount} total records | 
+                            🔒 Privacy: ${catalog.privacy_level || 'high'} | 
+                            👥 Min cohort: ${catalog.min_cohort_size || 10}
+                        </p>
+                        ${filesHtml}
+                        ${metadataHtml}
                     </div>
                 `;
             });

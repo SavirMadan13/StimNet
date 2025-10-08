@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 import asyncio
 import threading
 from pathlib import Path
+import json
 
 from .config import settings
 from .database import get_db, init_db
@@ -139,22 +140,83 @@ async def list_nodes(db: Session = Depends(get_db)):
     return [NodeResponse.from_orm(node) for node in nodes]
 
 
-@app.get("/api/v1/data-catalogs", response_model=List[DataCatalogResponse])
+@app.get("/api/v1/data-catalogs")
 async def list_data_catalogs(
     access_level: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """List available data catalogs"""
-    query = db.query(DataCatalog)
-    
-    if access_level:
-        query = query.filter(DataCatalog.access_level == access_level)
-    else:
-        # Only show public and restricted catalogs by default
-        query = query.filter(DataCatalog.access_level.in_(["public", "restricted"]))
-    
-    catalogs = query.all()
-    return [DataCatalogResponse.from_orm(catalog) for catalog in catalogs]
+    """List available data catalogs from manifest file"""
+    try:
+        # Try to read from manifest file first
+        manifest_path = Path("data/data_manifest.json")
+        
+        if manifest_path.exists():
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+            
+            # Return catalogs from manifest with enriched information
+            catalogs = []
+            for catalog in manifest.get('catalogs', []):
+                # Verify files exist and get actual record counts
+                total_records = 0
+                files_info = []
+                
+                for file_info in catalog.get('files', []):
+                    file_path = Path(file_info['path'])
+                    if file_path.exists() and file_info['type'] == 'csv':
+                        # Count actual records
+                        import pandas as pd
+                        try:
+                            df = pd.read_csv(file_path)
+                            actual_count = len(df)
+                            total_records += actual_count
+                            files_info.append({
+                                **file_info,
+                                'actual_record_count': actual_count,
+                                'exists': True
+                            })
+                        except:
+                            files_info.append({
+                                **file_info,
+                                'exists': False
+                            })
+                    else:
+                        files_info.append({
+                            **file_info,
+                            'exists': file_path.exists() if file_info['type'] != 'synthetic' else True
+                        })
+                
+                catalogs.append({
+                    'id': catalog['id'],
+                    'name': catalog['name'],
+                    'description': catalog['description'],
+                    'data_type': catalog['data_type'],
+                    'privacy_level': catalog.get('privacy_level', 'high'),
+                    'min_cohort_size': catalog.get('min_cohort_size', 10),
+                    'files': files_info,
+                    'metadata': catalog.get('metadata', {}),
+                    'total_records': total_records if total_records > 0 else catalog.get('metadata', {}).get('total_subjects', 0)
+                })
+            
+            return catalogs
+        
+        # Fallback to database if manifest doesn't exist
+        query = db.query(DataCatalog)
+        
+        if access_level:
+            query = query.filter(DataCatalog.access_level == access_level)
+        else:
+            query = query.filter(DataCatalog.access_level.in_(["public", "restricted"]))
+        
+        catalogs = query.all()
+        return [DataCatalogResponse.from_orm(catalog) for catalog in catalogs]
+        
+    except Exception as e:
+        logger.error(f"Error reading data catalogs: {e}")
+        # Fallback to database
+        query = db.query(DataCatalog)
+        catalogs = query.all()
+        return [DataCatalogResponse.from_orm(catalog) for catalog in catalogs]
 
 
 @app.get("/api/v1/data-catalogs/{catalog_id}", response_model=DataCatalogResponse)
