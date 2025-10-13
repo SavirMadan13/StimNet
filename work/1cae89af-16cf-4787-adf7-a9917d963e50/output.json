@@ -1,0 +1,16 @@
+{
+  "analysis_type": "correlation_analysis",
+  "sample_size": 150,
+  "correlations": {
+    "age_vs_UPDRS_total": {
+      "correlation": 0.09646367920892442,
+      "p_value": 0.24027830943272666,
+      "significant": false
+    },
+    "quality_of_life_vs_UPDRS_change": {
+      "correlation": -0.01733050988183711,
+      "p_value": 0.8332815632225014,
+      "significant": false
+    }
+  }
+}

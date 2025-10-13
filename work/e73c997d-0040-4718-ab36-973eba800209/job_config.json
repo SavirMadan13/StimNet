@@ -1,0 +1,9 @@
+{
+  "job_id": "e73c997d-0040-4718-ab36-973eba800209",
+  "script_type": "python",
+  "parameters": {
+    "submitted_via": "web_interface"
+  },
+  "filters": {},
+  "data_catalog_id": 1
+}

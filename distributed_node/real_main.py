@@ -313,12 +313,23 @@ async def submit_job(
     if not target_node:
         raise HTTPException(status_code=404, detail="Target node not found")
     
-    # Find data catalog
-    data_catalog = db.query(DataCatalog).filter(
-        DataCatalog.name == job_request.data_catalog_name
-    ).first()
-    if not data_catalog:
-        raise HTTPException(status_code=404, detail="Data catalog not found")
+    # Find data catalog from manifest
+    manifest_path = Path("data/data_manifest.json")
+    if not manifest_path.exists():
+        raise HTTPException(status_code=500, detail="Data manifest not found")
+    
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+    
+    # Find catalog by ID or name in manifest (accept either)
+    catalog = None
+    for c in manifest.get('catalogs', []):
+        if c.get('id') == job_request.data_catalog_name or c.get('name') == job_request.data_catalog_name:
+            catalog = c
+            break
+    
+    if not catalog:
+        raise HTTPException(status_code=404, detail=f"Data catalog not found: {job_request.data_catalog_name}")
     
     # Validate script type
     if job_request.script_type not in settings.allowed_script_types:
@@ -335,7 +346,7 @@ async def submit_job(
         job_id=job_id,
         requester_node_id=target_node.id,
         executor_node_id=target_node.id,
-        data_catalog_id=data_catalog.id,
+        data_catalog_id=catalog['id'],  # Use manifest catalog ID (string)
         script_type=job_request.script_type,
         script_content=job_request.script_content,
         script_hash=script_hash,

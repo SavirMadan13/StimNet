@@ -4,8 +4,8 @@
   "catalogs": [
     {
       "id": "clinical_trial_data",
-      "name": "Clinical Trial Data",
-      "description": "Synthetic clinical trial dataset for Parkinson's disease research",
+      "name": "Parkinson's Disease Dataset (synthetic)",
+      "description": "Fake Parkinson's dataset",
       "institution": "Default Institution",
       "data_type": "tabular",
       "privacy_level": "high",
@@ -16,7 +16,13 @@
           "path": "data/catalogs/clinical_trial_data/subjects.csv",
           "type": "csv",
           "description": "Subject demographics and diagnosis information",
-          "columns": ["subject_id", "age", "sex", "diagnosis", "visit"],
+          "columns": [
+            {"name": "subject_id", "type": "string", "description": "Unique subject identifier"},
+            {"name": "age", "type": "int", "description": "Age in years"},
+            {"name": "sex", "type": "string", "description": "Biological sex (M/F)"},
+            {"name": "diagnosis", "type": "string", "description": "Primary diagnosis"},
+            {"name": "visit", "type": "string", "description": "Study visit identifier"}
+          ],
           "record_count": 150
         },
         {
@@ -24,7 +30,15 @@
           "path": "data/catalogs/clinical_trial_data/outcomes.csv",
           "type": "csv",
           "description": "Clinical outcomes and UPDRS scores",
-          "columns": ["subject_id", "visit", "UPDRS_total", "UPDRS_motor", "UPDRS_change", "quality_of_life", "treatment_response"],
+          "columns": [
+            {"name": "subject_id", "type": "string", "description": "Subject identifier"},
+            {"name": "visit", "type": "string", "description": "Study visit"},
+            {"name": "UPDRS_total", "type": "float", "description": "Total UPDRS score (0-108)"},
+            {"name": "UPDRS_motor", "type": "float", "description": "Motor subscale score (0-56)"},
+            {"name": "UPDRS_change", "type": "float", "description": "Change from baseline"},
+            {"name": "quality_of_life", "type": "float", "description": "Quality of life score (0-100)"},
+            {"name": "treatment_response", "type": "int", "description": "Treatment response (0=no, 1=yes)"}
+          ],
           "record_count": 150
         }
       ],
@@ -50,7 +64,17 @@
           "path": "data/catalogs/imaging_data/scan_metadata.csv",
           "type": "csv",
           "description": "MRI scan metadata and quality control metrics",
-          "columns": ["subject_id", "scan_id", "scan_type", "scan_date", "scanner_model", "field_strength", "quality_rating", "motion_score", "file_path"],
+          "columns": [
+            {"name": "subject_id", "type": "string", "description": "Subject identifier"},
+            {"name": "scan_id", "type": "string", "description": "Unique scan identifier"},
+            {"name": "scan_type", "type": "string", "description": "Type of scan (T1, DTI, fMRI)"},
+            {"name": "scan_date", "type": "string", "description": "Date of scan (YYYY-MM-DD)"},
+            {"name": "scanner_model", "type": "string", "description": "MRI scanner model"},
+            {"name": "field_strength", "type": "float", "description": "Magnetic field strength (Tesla)"},
+            {"name": "quality_rating", "type": "int", "description": "Quality rating (1-5)"},
+            {"name": "motion_score", "type": "float", "description": "Motion artifact score (0-1)"},
+            {"name": "file_path", "type": "string", "description": "Path to scan file"}
+          ],
           "record_count": 100
         }
       ],
@@ -59,6 +83,53 @@
         "total_scans": 100,
         "date_range": "2016-2023",
         "scanner_models": ["Siemens Prisma", "GE Discovery"]
+      }
+    },
+    {
+      "id": "dbs_vta_analysis",
+      "name": "DBS VTA Damage Score Analysis",
+      "description": "Deep Brain Stimulation Voxel-based Treatment Atlas analysis with connectivity mapping",
+      "institution": "Default Institution",
+      "data_type": "imaging",
+      "privacy_level": "high",
+      "min_cohort_size": 5,
+      "files": [
+        {
+          "name": "vta_metadata",
+          "path": "data/catalogs/dbs_vta_analysis/vta_metadata.csv",
+          "type": "csv",
+          "description": "VTA metadata including subject IDs, target coordinates, and clinical scores",
+          "columns": [
+            {"name": "subject_id", "type": "string", "description": "Unique subject identifier"},
+            {"name": "vta_file", "type": "string", "description": "Path to VTA nii file"},
+            {"name": "target_region", "type": "string", "description": "DBS target region (e.g., STN, GPi)"},
+            {"name": "laterality", "type": "string", "description": "Laterality (L/R/Bilateral)"},
+            {"name": "baseline_updrs", "type": "float", "description": "Baseline UPDRS-III score"},
+            {"name": "followup_updrs", "type": "float", "description": "Follow-up UPDRS-III score"},
+            {"name": "clinical_improvement", "type": "float", "description": "UPDRS improvement (%)"},
+            {"name": "stimulation_voltage", "type": "float", "description": "Stimulation voltage (V)"},
+            {"name": "stimulation_freq", "type": "float", "description": "Stimulation frequency (Hz)"}
+          ],
+          "record_count": 40
+        },
+        {
+          "name": "connectivity_map",
+          "path": "data/catalogs/dbs_vta_analysis/connectivity_map.nii.gz",
+          "type": "nii",
+          "description": "Group-average connectivity map for target region",
+          "columns": [
+            {"name": "voxel_coords", "type": "array", "description": "Voxel coordinates (x, y, z)"},
+            {"name": "connectivity_strength", "type": "float", "description": "Connectivity strength value"}
+          ],
+          "record_count": 100000
+        }
+      ],
+      "metadata": {
+        "study_name": "DBS Connectivity-Outcome Analysis",
+        "date_range": "2018-2023",
+        "total_subjects": 40,
+        "target_regions": ["STN", "GPi"],
+        "connectivity_method": "Tractography-based"
       }
     },
     {

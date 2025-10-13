@@ -66,43 +66,36 @@ SIMPLE_WEB_INTERFACE = """
 
                 <div class="form-group">
                     <label>Analysis Script:</label>
-                    <textarea id="script_content" name="script_content" placeholder="Enter your Python or R script here, or upload a file above...">import pandas as pd
-import os
-import json
-from datetime import datetime
+                    <textarea id="script_content" name="script_content" placeholder="Enter your Python or R script here, or upload a file above..."># Import data loading helper (automatically available)
+from data_loader import load_data, save_results
 
 print("🔍 Starting analysis...")
 
-# Load data
-data_root = os.environ.get('DATA_ROOT', './data')
-subjects_path = os.path.join(data_root, 'catalogs', 'clinical_trial_data', 'subjects.csv')
+# Load data from selected catalog (no paths needed!)
+data = load_data()
 
-if os.path.exists(subjects_path):
-    df = pd.read_csv(subjects_path)
-    print(f"📊 Loaded {len(df)} subjects")
-    
-    # Your analysis here
-    result = {
-        "sample_size": len(df),
-        "age_mean": float(df['age'].mean()),
-        "sex_distribution": df['sex'].value_counts().to_dict(),
-        "analysis_complete": True,
-        "timestamp": datetime.now().isoformat()
-    }
-    
-    # Save results
-    with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-        json.dump(result, f, indent=2)
-    
-    print(f"✅ Analysis complete: {result}")
-else:
-    print("❌ Data not found")
+# Access your data by name
+subjects = data['subjects']
+print(f"📊 Loaded {len(subjects)} subjects")
+
+# Your analysis here
+result = {
+    "sample_size": len(subjects),
+    "age_mean": float(subjects['age'].mean()),
+    "sex_distribution": subjects['sex'].value_counts().to_dict(),
+    "analysis_complete": True
+}
+
+# Save results
+save_results(result)
+print(f"✅ Analysis complete!")
 </textarea>
                 </div>
 
                 <button type="button" onclick="submitJob()">🚀 Run Analysis</button>
                 <button type="button" onclick="loadExample('demographics')">📊 Load Demographics Example</button>
                 <button type="button" onclick="loadExample('correlation')">📈 Load Correlation Example</button>
+                <button type="button" onclick="loadExample('damage_score')">🧠 Load Damage Score Example</button>
             </form>
         </div>
 
@@ -111,13 +104,12 @@ else:
             
             <div class="example-script">
                 <h4>📊 Demographics Analysis</h4>
-                <div class="code">import pandas as pd
-import os
-import json
+                <div class="code"># Import data loading helper
+from data_loader import load_data, save_results
 
-# Load clinical data
-data_root = os.environ.get('DATA_ROOT', './data')
-subjects = pd.read_csv(f'{data_root}/catalogs/clinical_trial_data/subjects.csv')
+# Load data from selected catalog
+data = load_data()
+subjects = data['subjects']
 
 # Calculate demographics
 result = {
@@ -131,22 +123,19 @@ result = {
 }
 
 # Save results
-with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-    json.dump(result, f)</div>
+save_results(result)</div>
             </div>
 
             <div class="example-script">
                 <h4>📈 Correlation Analysis</h4>
-                <div class="code">import pandas as pd
-import numpy as np
+                <div class="code"># Import data loading helper
+from data_loader import load_data, save_results
 from scipy import stats
-import os
-import json
 
-# Load data
-data_root = os.environ.get('DATA_ROOT', './data')
-subjects = pd.read_csv(f'{data_root}/catalogs/clinical_trial_data/subjects.csv')
-outcomes = pd.read_csv(f'{data_root}/catalogs/clinical_trial_data/outcomes.csv')
+# Load data from selected catalog
+data_dict = load_data()
+subjects = data_dict['subjects']
+outcomes = data_dict['outcomes']
 
 # Merge datasets
 data = subjects.merge(outcomes, on=['subject_id', 'visit'])
@@ -161,8 +150,8 @@ result = {
     "significant": p_val < 0.05
 }
 
-with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-    json.dump(result, f)</div>
+# Save results
+save_results(result)</div>
             </div>
         </div>
 

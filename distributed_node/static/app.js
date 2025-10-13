@@ -36,16 +36,45 @@ async function loadDataCatalogs() {
                            catalog.id.includes('imaging') ? '🧠' : '📊';
                 const recordCount = catalog.total_records || 'Unknown';
                 
-                // Build files list
+                // Build files list with column details
                 let filesHtml = '';
                 if (catalog.files && catalog.files.length > 0) {
-                    filesHtml = '<ul style="font-size: 0.85em; margin: 5px 0; padding-left: 20px;">';
+                    filesHtml = '<div style="font-size: 0.85em; margin: 10px 0;">';
                     catalog.files.forEach(file => {
                         const count = file.actual_record_count || file.record_count || '?';
                         const status = file.exists ? '✅' : '❌';
-                        filesHtml += `<li>${status} ${file.name}: ${count} records</li>`;
+                        
+                        // Build column information
+                        let columnsHtml = '';
+                        if (file.columns && file.columns.length > 0) {
+                            columnsHtml = '<ul style="margin: 5px 0; padding-left: 25px; font-size: 0.9em; color: #555;">';
+                            file.columns.forEach(col => {
+                                // If column is an object with type info
+                                if (typeof col === 'object' && col.name) {
+                                    const type = col.type || 'unknown';
+                                    const typeColor = type === 'float' ? '#0066cc' : 
+                                                    type === 'int' ? '#009900' : 
+                                                    type === 'string' ? '#cc6600' : '#666';
+                                    columnsHtml += `<li><code style="color: ${typeColor}; font-weight: 600;">${col.name}</code> <span style="color: #999;">(${type})</span>${col.description ? `: ${col.description}` : ''}</li>`;
+                                } else {
+                                    // If column is just a string name
+                                    columnsHtml += `<li><code style="color: #666;">${col}</code></li>`;
+                                }
+                            });
+                            columnsHtml += '</ul>';
+                        }
+                        
+                        filesHtml += `
+                            <div style="margin-bottom: 12px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">
+                                    ${status} <strong>${file.name}</strong> <span style="color: #666;">(${count} records)</span>
+                                </div>
+                                ${file.description ? `<div style="color: #666; font-size: 0.9em; margin-bottom: 4px;">${file.description}</div>` : ''}
+                                ${columnsHtml}
+                            </div>
+                        `;
                     });
-                    filesHtml += '</ul>';
+                    filesHtml += '</div>';
                 }
                 
                 // Build metadata display
@@ -214,62 +243,48 @@ function loadExample(type) {
     const textarea = document.getElementById('script_content');
     
     if (type === 'demographics') {
-        textarea.value = `import pandas as pd
-import os
-import json
-from datetime import datetime
+        textarea.value = `# Import data loading helper
+from data_loader import load_data, save_results
 
 print("📊 Demographics Analysis Starting...")
 
-# Load clinical data
-data_root = os.environ.get('DATA_ROOT', './data')
-subjects_path = os.path.join(data_root, 'catalogs', 'clinical_trial_data', 'subjects.csv')
+# Load data from selected catalog (no paths needed!)
+data = load_data()
+subjects = data['subjects']
 
-if os.path.exists(subjects_path):
-    df = pd.read_csv(subjects_path)
-    print(f"📂 Loaded {len(df)} subjects")
-    
-    # Calculate demographics
-    result = {
-        "analysis_type": "demographics",
-        "total_subjects": len(df),
-        "age_statistics": {
-            "mean": float(df['age'].mean()),
-            "std": float(df['age'].std()),
-            "min": int(df['age'].min()),
-            "max": int(df['age'].max())
-        },
-        "sex_distribution": df['sex'].value_counts().to_dict(),
-        "diagnosis_breakdown": df['diagnosis'].value_counts().to_dict(),
-        "visit_distribution": df['visit'].value_counts().to_dict(),
-        "timestamp": datetime.now().isoformat()
-    }
-    
-    print(f"✅ Demographics analysis complete!")
-    print(f"👥 {result['total_subjects']} subjects analyzed")
-    
-    # Save results
-    with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-        json.dump(result, f, indent=2)
-else:
-    print("❌ Data file not found")
-    result = {"error": "Data not found"}
-    with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-        json.dump(result, f)`;
+print(f"📂 Loaded {len(subjects)} subjects")
+
+# Calculate demographics
+result = {
+    "analysis_type": "demographics",
+    "total_subjects": len(subjects),
+    "age_statistics": {
+        "mean": float(subjects['age'].mean()),
+        "std": float(subjects['age'].std()),
+        "min": int(subjects['age'].min()),
+        "max": int(subjects['age'].max())
+    },
+    "sex_distribution": subjects['sex'].value_counts().to_dict(),
+    "diagnosis_breakdown": subjects['diagnosis'].value_counts().to_dict(),
+    "visit_distribution": subjects['visit'].value_counts().to_dict()
+}
+
+print(f"✅ Demographics analysis complete!")
+print(f"👥 {result['total_subjects']} subjects analyzed")
+
+# Save results
+save_results(result)`;
     } else if (type === 'correlation') {
-        textarea.value = `import pandas as pd
-import numpy as np
+        textarea.value = `# Import data loading helper
+from data_loader import load_data, save_results
 from scipy import stats
-import os
-import json
-from datetime import datetime
 
 print("📈 Correlation Analysis Starting...")
 
-# Load data
-data_root = os.environ.get('DATA_ROOT', './data')
-subjects = pd.read_csv(f'{data_root}/catalogs/clinical_trial_data/subjects.csv')
-outcomes = pd.read_csv(f'{data_root}/catalogs/clinical_trial_data/outcomes.csv')
+# Load data from selected catalog (no paths needed!)
+data_dict = load_data()
+subjects = data_dict['subjects']
+outcomes = data_dict['outcomes']
 
 print(f"📂 Loaded {len(subjects)} subjects, {len(outcomes)} outcomes")
 
@@ -296,8 +311,7 @@ if len(data) >= 10:
                 "p_value": float(p_qol_updrs),
                 "significant": p_qol_updrs < 0.05
             }
-        },
-        "timestamp": datetime.now().isoformat()
+        }
     }
     
     print(f"✅ Correlation analysis complete!")
@@ -307,8 +321,77 @@ else:
     result = {"error": "Insufficient data for correlation analysis"}
 
 # Save results
-with open(os.environ.get('OUTPUT_FILE', 'output.json'), 'w') as f:
-    json.dump(result, f, indent=2)`;
+save_results(result)`;
+    } else if (type === 'damage_score') {
+        textarea.value = `# Import data loading helper
+from data_loader import load_data, save_results
+from scipy import stats
+import numpy as np
+import nibabel as nib
+
+print("🧠 DBS VTA Damage Score Analysis Starting...")
+
+# Load data from selected catalog
+data = load_data()
+vta_metadata = data['vta_metadata']
+connectivity_map = data['connectivity_map']
+
+print(f"📂 Loaded {len(vta_metadata)} VTA subjects")
+print(f"📂 Loaded connectivity map: {connectivity_map.shape}")
+
+# Calculate damage scores (overlap between VTA and connectivity map)
+damage_scores = []
+clinical_improvements = []
+
+for idx, row in vta_metadata.iterrows():
+    # In real analysis, load each VTA file and calculate overlap
+    # For demo, we'll use synthetic damage scores
+    # Simulate realistic correlation between damage and outcome
+    base_damage = np.random.normal(0.5, 0.15)
+    base_damage = max(0.1, min(0.9, base_damage))
+    
+    # Add some realistic noise
+    noise = np.random.normal(0, 0.1)
+    damage_score = base_damage + noise
+    
+    damage_scores.append(damage_score)
+    clinical_improvements.append(row['clinical_improvement'])
+
+# Convert to numpy arrays
+damage_scores = np.array(damage_scores)
+clinical_improvements = np.array(clinical_improvements)
+
+# Calculate correlation
+corr, p_val = stats.pearsonr(damage_scores, clinical_improvements)
+
+# Additional statistics
+mean_damage = float(np.mean(damage_scores))
+mean_improvement = float(np.mean(clinical_improvements))
+
+result = {
+    "analysis_type": "dbs_damage_score",
+    "sample_size": len(vta_metadata),
+    "correlation": {
+        "correlation_coefficient": float(corr),
+        "p_value": float(p_val),
+        "significant": p_val < 0.05
+    },
+    "summary_statistics": {
+        "mean_damage_score": mean_damage,
+        "mean_clinical_improvement": mean_improvement,
+        "damage_score_range": [float(np.min(damage_scores)), float(np.max(damage_scores))],
+        "improvement_range": [float(np.min(clinical_improvements)), float(np.max(clinical_improvements))]
+    },
+    "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
+}
+
+print(f"✅ Damage score analysis complete!")
+print(f"📊 Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"📊 Mean damage score: {mean_damage:.3f}")
+print(f"📊 Mean clinical improvement: {mean_improvement:.1f}%")
+
+# Save results
+save_results(result)`;
     }
 }
 

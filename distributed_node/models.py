@@ -62,8 +62,7 @@ class DataCatalog(Base):
     last_updated = Column(DateTime, default=func.now())
     created_at = Column(DateTime, default=func.now())
     
-    # Relationships
-    jobs = relationship("Job", back_populates="data_catalog")
+    # Note: jobs relationship removed - now using manifest catalog IDs (strings) instead of database IDs
 
 
 class Job(Base):
@@ -73,7 +72,7 @@ class Job(Base):
     job_id = Column(String(100), unique=True, index=True, nullable=False)
     requester_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
     executor_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
-    data_catalog_id = Column(Integer, ForeignKey("data_catalogs.id"), nullable=False)
+    data_catalog_id = Column(String, nullable=False)  # Now stores manifest catalog ID (string)
     
     script_type = Column(String(50), nullable=False)
     script_content = Column(Text, nullable=False)
@@ -100,7 +99,7 @@ class Job(Base):
     # Relationships
     requester_node = relationship("Node", foreign_keys=[requester_node_id], back_populates="jobs_submitted")
     executor_node = relationship("Node", foreign_keys=[executor_node_id], back_populates="jobs_executed")
-    data_catalog = relationship("DataCatalog", back_populates="jobs")
+    # Note: data_catalog relationship removed - now using manifest catalog IDs (strings) instead of database IDs
     audit_logs = relationship("AuditLog", back_populates="job")
 
 

@@ -1,0 +1,9 @@
+{
+  "job_id": "f05102c9-cf59-4055-89ba-41c62f8bdff0",
+  "script_type": "python",
+  "parameters": {
+    "submitted_via": "web_interface"
+  },
+  "filters": {},
+  "data_catalog_id": "clinical_trial_data"
+}

@@ -1,0 +1,8 @@
+{
+  "analysis_type": "correlation_analysis",
+  "sample_size": 150,
+  "correlations": {
+    "age_vs_UPDRS_total": {
+      "correlation": 0.09646367920892442,
+      "p_value": 0.24027830943272666,
+      "significant": 

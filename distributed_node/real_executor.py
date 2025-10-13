@@ -48,6 +48,14 @@ class RealScriptExecutor:
             with open(script_path, 'w') as f:
                 f.write(script_content)
             
+            # Copy data_loader.py to job directory so scripts can import it
+            import shutil
+            data_loader_src = os.path.join(os.path.dirname(__file__), "data_loader.py")
+            data_loader_dst = os.path.join(job_dir, "data_loader.py")
+            if os.path.exists(data_loader_src):
+                shutil.copy2(data_loader_src, data_loader_dst)
+                logger.info(f"Copied data_loader.py to job directory")
+            
             # Create job configuration
             config_path = os.path.join(job_dir, "job_config.json")
             job_config = {
