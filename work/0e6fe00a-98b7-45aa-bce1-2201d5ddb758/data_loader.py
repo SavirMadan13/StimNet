@@ -10,17 +10,17 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 
-def load_data() -> Dict[str, Any]:
+def load_data() -> Dict[str, pd.DataFrame]:
     """
-    Load all data files from the selected catalog and any uploaded files.
+    Load all data files from the selected catalog.
     
     Returns:
-        Dictionary mapping file names to DataFrames or other data objects
+        Dictionary mapping file names to DataFrames
         
     Example:
         data = load_data()
-        subjects = data['subjects']  # From catalog
-        my_map = data['uploaded_connectivity_map']  # From uploaded file
+        subjects = data['subjects']
+        outcomes = data['outcomes']
     """
     # Read job configuration
     config_path = os.environ.get('JOB_CONFIG')
@@ -34,9 +34,6 @@ def load_data() -> Dict[str, Any]:
     catalog_id = job_config.get('data_catalog_id')
     if not catalog_id:
         raise ValueError("No data catalog specified in job configuration")
-    
-    # Get uploaded file IDs if any
-    uploaded_file_ids = job_config.get('uploaded_file_ids', [])
     
     # Read manifest to find catalog files
     # Use absolute path to project root (go up 3 levels from job directory to project root)
@@ -109,55 +106,6 @@ def load_data() -> Dict[str, Any]:
         raise ValueError(f"No data files could be loaded from catalog '{catalog_id}'")
     
     print(f"\n✓ Successfully loaded {len(data)} data file(s) from '{catalog['name']}'")
-    
-    # Load uploaded files if any
-    if uploaded_file_ids:
-        print(f"\n📂 Loading {len(uploaded_file_ids)} uploaded file(s)...")
-        uploaded_files_path = project_root / "uploads" / "uploaded_files.json"
-        
-        if uploaded_files_path.exists():
-            with open(uploaded_files_path, 'r') as f:
-                uploaded_files_info = json.load(f)
-            
-            for file_id in uploaded_file_ids:
-                # Find the file info
-                file_info = None
-                for f in uploaded_files_info.get('files', []):
-                    if f.get('file_id') == file_id:
-                        file_info = f
-                        break
-                
-                if not file_info:
-                    print(f"Warning: Uploaded file {file_id} not found")
-                    continue
-                
-                # Load the file based on type
-                file_path = Path(file_info['path'])
-                file_type = file_info['type']
-                file_name = f"uploaded_{Path(file_info['filename']).stem}"
-                
-                if file_type in ['csv', 'tsv']:
-                    try:
-                        df = pd.read_csv(file_path, sep='\t' if file_type == 'tsv' else ',')
-                        data[file_name] = df
-                        print(f"✓ Loaded uploaded file: {file_name} ({len(df)} rows)")
-                    except Exception as e:
-                        print(f"Error loading uploaded file {file_name}: {e}")
-                elif file_type in ['nii', 'nii.gz', 'nifti']:
-                    try:
-                        import nibabel as nib
-                        img = nib.load(file_path)
-                        data[file_name] = img
-                        print(f"✓ Loaded uploaded file: {file_name} ({img.shape} volume)")
-                    except ImportError:
-                        print(f"Warning: nibabel not installed. Cannot load {file_name}")
-                    except Exception as e:
-                        print(f"Error loading uploaded file {file_name}: {e}")
-                else:
-                    print(f"Warning: Unsupported uploaded file type '{file_type}' for {file_name}")
-        
-        print(f"\n✓ Successfully loaded {len(uploaded_file_ids)} uploaded file(s)")
-    
     return data
 
 

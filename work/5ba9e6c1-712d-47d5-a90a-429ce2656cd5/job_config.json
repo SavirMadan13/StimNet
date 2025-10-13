@@ -1,0 +1,10 @@
+{
+  "job_id": "5ba9e6c1-712d-47d5-a90a-429ce2656cd5",
+  "script_type": "python",
+  "parameters": {
+    "submitted_via": "web_interface"
+  },
+  "filters": {},
+  "data_catalog_id": "dbs_vta_analysis",
+  "uploaded_file_ids": []
+}

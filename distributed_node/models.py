@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 from enum import Enum
 
@@ -80,6 +80,7 @@ class Job(Base):
     
     parameters = Column(JSON)
     filters = Column(JSON)
+    uploaded_file_ids = Column(JSON)  # List of uploaded file IDs to use
     
     status = Column(String(50), default=JobStatus.QUEUED)
     progress = Column(Float, default=0.0)
@@ -199,6 +200,7 @@ class JobSubmissionRequest(BaseModel):
     script_content: str
     parameters: Optional[Dict[str, Any]] = None
     filters: Optional[Dict[str, Any]] = None
+    uploaded_file_ids: Optional[List[str]] = None  # IDs of uploaded files to use
 
 
 class JobSubmissionResponse(BaseModel):

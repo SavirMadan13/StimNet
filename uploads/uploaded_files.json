@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "file_id": "e5a4ecbe-3ce2-4b39-a194-0aee1502ad5f",
+      "filename": "mni_icbm152_t1_tal_nlin_sym_09a_mask.nii",
+      "path": "uploads/data/87570867-b2f5-4066-87b0-9f0d0f622a3f_mni_icbm152_t1_tal_nlin_sym_09a_mask.nii",
+      "type": "nii",
+      "uploaded_at": "2025-10-13T12:46:09.152988",
+      "size_bytes": 17350930
+    },
+    {
+      "file_id": "ae5ca383-5201-45b0-bd8d-68eeff324acc",
+      "filename": "mni_icbm152_t1_tal_nlin_sym_09a_mask.nii",
+      "path": "uploads/data/16a77f93-107e-4439-bd48-12e341da423e_mni_icbm152_t1_tal_nlin_sym_09a_mask.nii",
+      "type": "nii",
+      "uploaded_at": "2025-10-13T14:13:04.377694",
+      "size_bytes": 17350930
+    }
+  ],
+  "last_updated": "2025-10-13T14:13:04.377760"
+}

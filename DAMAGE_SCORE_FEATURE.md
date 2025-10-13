@@ -31,6 +31,8 @@ async with DistributedClient("http://localhost:8000") as client:
     
     job_id = await client.submit_script(
         script_content=damage_score_script,
+
+        
         target_node_id="node-1",
         data_catalog_name="dbs_vta_analysis"
     )

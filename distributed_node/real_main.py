@@ -234,6 +234,7 @@ def _execute_job_sync(job_id: int):
     from .database import SessionLocal
     
     db = SessionLocal()
+    job = None
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
@@ -245,7 +246,12 @@ def _execute_job_sync(job_id: int):
         # Update job status
         job.status = JobStatus.RUNNING
         job.started_at = datetime.utcnow()
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            logger.error(f"Error committing job status update: {e}")
+            db.rollback()
+            return
         
         # Validate script security
         security_check = script_executor.validate_script_security(job.script_content, job.script_type)
@@ -255,7 +261,11 @@ def _execute_job_sync(job_id: int):
             job.status = JobStatus.FAILED
             job.error_message = f"Script failed security validation: {security_check['warnings']}"
             job.completed_at = datetime.utcnow()
-            db.commit()
+            try:
+                db.commit()
+            except Exception as e:
+                logger.error(f"Error committing security validation failure: {e}")
+                db.rollback()
             return
         
         if security_check["warnings"]:
@@ -270,7 +280,8 @@ def _execute_job_sync(job_id: int):
             job_id=job.job_id,
             parameters=job.parameters,
             filters=job.filters,
-            data_catalog_id=job.data_catalog_id
+            data_catalog_id=job.data_catalog_id,
+            uploaded_file_ids=job.uploaded_file_ids or []
         )
         
         # Update job with results
@@ -287,15 +298,23 @@ def _execute_job_sync(job_id: int):
             logger.error(f"❌ Job {job.job_id} failed: {execution_result['error']}")
         
         job.completed_at = datetime.utcnow()
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            logger.error(f"Error committing job completion: {e}")
+            db.rollback()
         
     except Exception as e:
         logger.error(f"Error executing job {job_id}: {e}")
         if job:
-            job.status = JobStatus.FAILED
-            job.error_message = str(e)
-            job.completed_at = datetime.utcnow()
-            db.commit()
+            try:
+                job.status = JobStatus.FAILED
+                job.error_message = str(e)
+                job.completed_at = datetime.utcnow()
+                db.commit()
+            except Exception as commit_error:
+                logger.error(f"Error committing job failure: {commit_error}")
+                db.rollback()
     finally:
         db.close()
 
@@ -352,6 +371,7 @@ async def submit_job(
         script_hash=script_hash,
         parameters=job_request.parameters or {},
         filters=job_request.filters or {},
+        uploaded_file_ids=job_request.uploaded_file_ids or [],
         status=JobStatus.QUEUED
     )
     
@@ -431,6 +451,51 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_SCRIPT_EXTENSIONS = {".py", ".r", ".R"}
 ALLOWED_DATA_EXTENSIONS = {".nii", ".nii.gz", ".csv", ".tsv", ".npy", ".npz", ".mat", ".json"}
 
+
+def store_uploaded_file_info(file_path: str, filename: str, file_type: str) -> dict:
+    """
+    Store uploaded file info for later use in analysis scripts.
+    Returns file info dict with file_id, path, and metadata.
+    """
+    try:
+        uploads_info_dir = Path("uploads")
+        uploads_info_dir.mkdir(exist_ok=True)
+        
+        info_file = uploads_info_dir / "uploaded_files.json"
+        
+        # Read existing uploads info
+        if info_file.exists():
+            with open(info_file, 'r') as f:
+                uploads_info = json.load(f)
+        else:
+            uploads_info = {"files": []}
+        
+        # Create file info
+        file_id = str(uuid.uuid4())
+        file_info = {
+            "file_id": file_id,
+            "filename": filename,
+            "path": file_path,
+            "type": file_type.replace('.', ''),  # e.g., 'nii.gz' or 'csv'
+            "uploaded_at": datetime.now().isoformat(),
+            "size_bytes": Path(file_path).stat().st_size
+        }
+        
+        uploads_info['files'].append(file_info)
+        uploads_info['last_updated'] = datetime.now().isoformat()
+        
+        # Write back
+        with open(info_file, 'w') as f:
+            json.dump(uploads_info, f, indent=2)
+        
+        logger.info(f"Stored uploaded file info for {filename}")
+        return file_info
+        
+    except Exception as e:
+        logger.error(f"Error storing uploaded file info: {e}")
+        return {}
+
+
 @app.post("/api/v1/upload/script")
 async def upload_script(file: UploadFile = File(...)):
     """Upload a script file (.py or .R)"""
@@ -474,7 +539,7 @@ async def upload_script(file: UploadFile = File(...)):
 
 @app.post("/api/v1/upload/data")
 async def upload_data(file: UploadFile = File(...)):
-    """Upload a data file (.nii, .csv, etc.)"""
+    """Upload a data file (.nii, .csv, etc.) and auto-integrate into manifest"""
     try:
         # Validate file extension
         file_ext = Path(file.filename).suffix.lower()
@@ -501,13 +566,21 @@ async def upload_data(file: UploadFile = File(...)):
         
         logger.info(f"Data file uploaded: {safe_filename} ({file_size} bytes)")
         
+        # Store file info for use in analysis scripts
+        file_info = store_uploaded_file_info(
+            file_path=str(file_path),
+            filename=file.filename,
+            file_type=file_ext
+        )
+        
         return {
-            "file_id": file_id,
+            "file_id": file_info.get('file_id', file_id),
             "filename": file.filename,
             "saved_as": safe_filename,
             "size_bytes": file_size,
             "path": str(file_path),
-            "type": file_ext
+            "type": file_ext,
+            "message": f"File uploaded successfully. Use this file in your analysis script."
         }
     
     except Exception as e:

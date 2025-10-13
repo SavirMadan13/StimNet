@@ -30,7 +30,8 @@ class RealScriptExecutor:
         job_id: str,
         parameters: Dict[str, Any] = None,
         filters: Dict[str, Any] = None,
-        data_catalog_id: int = None
+        data_catalog_id: int = None,
+        uploaded_file_ids: list = None
     ) -> Dict[str, Any]:
         """Execute a script and return results"""
         
@@ -63,7 +64,8 @@ class RealScriptExecutor:
                 "script_type": script_type,
                 "parameters": parameters or {},
                 "filters": filters or {},
-                "data_catalog_id": data_catalog_id
+                "data_catalog_id": data_catalog_id,
+                "uploaded_file_ids": uploaded_file_ids or []
             }
             
             with open(config_path, 'w') as f:

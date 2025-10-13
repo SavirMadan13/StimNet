@@ -1,0 +1,22 @@
+{
+  "analysis_type": "dbs_damage_score",
+  "sample_size": 40,
+  "correlation": {
+    "correlation_coefficient": -0.05200058628084227,
+    "p_value": 0.7499786796991833,
+    "significant": false
+  },
+  "summary_statistics": {
+    "mean_damage_score": 0.5026101699621618,
+    "mean_clinical_improvement": 51.165,
+    "damage_score_range": [
+      0.2161095092795323,
+      0.9430656089052071
+    ],
+    "improvement_range": [
+      29.9,
+      73.3
+    ]
+  },
+  "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
+}
