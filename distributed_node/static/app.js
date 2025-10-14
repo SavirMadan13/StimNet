@@ -3,99 +3,82 @@
  * Handles form submission, job execution, and results display
  */
 
-let currentJobId = null;
+let currentRequestId = null;
 
 /**
- * Load available data catalogs from the API
+ * Load available data catalogs with score/timeline options
  */
 async function loadDataCatalogs() {
     try {
-        const response = await fetch('/api/v1/data-catalogs');
+        const response = await fetch('/api/v1/data-catalogs-with-options');
         const catalogs = await response.json();
         
         // Update the dropdown
-        const catalogSelect = document.getElementById('catalog');
-        catalogSelect.innerHTML = ''; // Clear existing options
+        const catalogSelect = document.getElementById('data_catalog');
+        catalogSelect.innerHTML = '<option value="">Select a dataset...</option>';
         
         catalogs.forEach(catalog => {
             const option = document.createElement('option');
-            option.value = catalog.id || catalog.name;
-            const recordInfo = catalog.total_records ? ` - ${catalog.total_records} records` : '';
-            option.textContent = `${catalog.name}${recordInfo}`;
+            option.value = catalog.id;
+            option.textContent = catalog.name;
             catalogSelect.appendChild(option);
         });
         
-        // Update the catalog information display
+        // Update the catalog information display with clean layout
         const catalogsInfo = document.getElementById('catalogsInfo');
         if (catalogs.length === 0) {
             catalogsInfo.innerHTML = '<p>No data catalogs available.</p>';
         } else {
-            let html = '<div class="grid">';
+            let html = '<div class="catalog-list">';
             catalogs.forEach(catalog => {
-                const icon = catalog.id.includes('clinical') ? '🏥' : 
-                           catalog.id.includes('imaging') ? '🧠' : '📊';
                 const recordCount = catalog.total_records || 'Unknown';
                 
-                // Build files list with column details
-                let filesHtml = '';
-                if (catalog.files && catalog.files.length > 0) {
-                    filesHtml = '<div style="font-size: 0.85em; margin: 10px 0;">';
-                    catalog.files.forEach(file => {
-                        const count = file.actual_record_count || file.record_count || '?';
-                        const status = file.exists ? '✅' : '❌';
-                        
-                        // Build column information
-                        let columnsHtml = '';
-                        if (file.columns && file.columns.length > 0) {
-                            columnsHtml = '<ul style="margin: 5px 0; padding-left: 25px; font-size: 0.9em; color: #555;">';
-                            file.columns.forEach(col => {
-                                // If column is an object with type info
-                                if (typeof col === 'object' && col.name) {
-                                    const type = col.type || 'unknown';
-                                    const typeColor = type === 'float' ? '#0066cc' : 
-                                                    type === 'int' ? '#009900' : 
-                                                    type === 'string' ? '#cc6600' : '#666';
-                                    columnsHtml += `<li><code style="color: ${typeColor}; font-weight: 600;">${col.name}</code> <span style="color: #999;">(${type})</span>${col.description ? `: ${col.description}` : ''}</li>`;
-                                } else {
-                                    // If column is just a string name
-                                    columnsHtml += `<li><code style="color: #666;">${col}</code></li>`;
-                                }
-                            });
-                            columnsHtml += '</ul>';
-                        }
-                        
-                        filesHtml += `
-                            <div style="margin-bottom: 12px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
-                                <div style="font-weight: 600; margin-bottom: 4px;">
-                                    ${status} <strong>${file.name}</strong> <span style="color: #666;">(${count} records)</span>
-                                </div>
-                                ${file.description ? `<div style="color: #666; font-size: 0.9em; margin-bottom: 4px;">${file.description}</div>` : ''}
-                                ${columnsHtml}
-                            </div>
-                        `;
+                // Build score options list
+                let scoreOptionsHtml = '';
+                if (catalog.score_options && catalog.score_options.length > 0) {
+                    scoreOptionsHtml = '<ul class="option-list">';
+                    catalog.score_options.forEach(option => {
+                        scoreOptionsHtml += `<li>${option.option_name}${option.is_default ? ' (default)' : ''}</li>`;
                     });
-                    filesHtml += '</div>';
+                    scoreOptionsHtml += '</ul>';
+                } else {
+                    scoreOptionsHtml = '<p style="color: #999; font-style: italic;">No score options available</p>';
                 }
                 
-                // Build metadata display
-                let metadataHtml = '';
-                if (catalog.metadata) {
-                    const meta = catalog.metadata;
-                    if (meta.study_name) metadataHtml += `<p style="font-size: 0.85em;"><strong>Study:</strong> ${meta.study_name}</p>`;
-                    if (meta.date_range) metadataHtml += `<p style="font-size: 0.85em;"><strong>Period:</strong> ${meta.date_range}</p>`;
+                // Build timeline options list
+                let timelineOptionsHtml = '';
+                if (catalog.timeline_options && catalog.timeline_options.length > 0) {
+                    timelineOptionsHtml = '<ul class="option-list">';
+                    catalog.timeline_options.forEach(option => {
+                        timelineOptionsHtml += `<li>${option.option_name}${option.is_default ? ' (default)' : ''}</li>`;
+                    });
+                    timelineOptionsHtml += '</ul>';
+                } else {
+                    timelineOptionsHtml = '<p style="color: #999; font-style: italic;">No timeline options available</p>';
                 }
                 
                 html += `
-                    <div>
-                        <h4>${icon} ${catalog.name}</h4>
-                        <p><strong>${catalog.description}</strong></p>
-                        <p style="font-size: 0.9em; color: #666;">
-                            📊 ${recordCount} total records | 
-                            🔒 Privacy: ${catalog.privacy_level || 'high'} | 
-                            👥 Min cohort: ${catalog.min_cohort_size || 10}
-                        </p>
-                        ${filesHtml}
-                        ${metadataHtml}
+                    <div class="catalog-item">
+                        <div class="catalog-header">
+                            <h3 class="catalog-title">${catalog.name}</h3>
+                            <div class="catalog-meta">
+                                <strong>${recordCount}</strong> records | 
+                                <span style="color: #666;">${catalog.access_level}</span>
+                            </div>
+                        </div>
+                        <div class="catalog-description">${catalog.description || 'No description available'}</div>
+                        <div class="catalog-options">
+                            <div class="options-grid">
+                                <div class="option-group">
+                                    <h5>Score Options</h5>
+                                    ${scoreOptionsHtml}
+                                </div>
+                                <div class="option-group">
+                                    <h5>Timeline Options</h5>
+                                    ${timelineOptionsHtml}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
@@ -103,20 +86,74 @@ async function loadDataCatalogs() {
             catalogsInfo.innerHTML = html;
         }
         
-        console.log(`Loaded ${catalogs.length} data catalogs`);
+        console.log(`Loaded ${catalogs.length} data catalogs with options`);
     } catch (error) {
         console.error('Error loading data catalogs:', error);
         
-        // Fallback to hardcoded options if API fails
-        const catalogSelect = document.getElementById('catalog');
+        // Fallback to basic display
+        const catalogSelect = document.getElementById('data_catalog');
         catalogSelect.innerHTML = `
+            <option value="">Select a dataset...</option>
             <option value="clinical_trial_data">Clinical Trial Data</option>
             <option value="imaging_data">Imaging Data</option>
+            <option value="dbs_vta_analysis">DBS VTA Analysis</option>
             <option value="demo_dataset">Demo Dataset</option>
         `;
         
         const catalogsInfo = document.getElementById('catalogsInfo');
         catalogsInfo.innerHTML = '<p style="color: orange;">⚠️ Could not load catalog information from server. Using defaults.</p>';
+    }
+}
+
+/**
+ * Load score and timeline options for selected catalog
+ */
+async function loadScoreTimelineOptions() {
+    const catalogId = document.getElementById('data_catalog').value;
+    if (!catalogId) {
+        // Clear options
+        document.getElementById('selected_score').innerHTML = '<option value="">Select score option...</option>';
+        document.getElementById('selected_timeline').innerHTML = '<option value="">Select timeline option...</option>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/score-timeline-options/${catalogId}`);
+        const options = await response.json();
+        
+        // Separate score and timeline options
+        const scoreOptions = options.filter(opt => opt.option_type === 'score');
+        const timelineOptions = options.filter(opt => opt.option_type === 'timeline');
+        
+        // Update score dropdown
+        const scoreSelect = document.getElementById('selected_score');
+        scoreSelect.innerHTML = '<option value="">Select score option...</option>';
+        scoreOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.option_value;
+            optionElement.textContent = option.option_name;
+            if (option.is_default) {
+                optionElement.selected = true;
+            }
+            scoreSelect.appendChild(optionElement);
+        });
+        
+        // Update timeline dropdown
+        const timelineSelect = document.getElementById('selected_timeline');
+        timelineSelect.innerHTML = '<option value="">Select timeline option...</option>';
+        timelineOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.option_value;
+            optionElement.textContent = option.option_name;
+            if (option.is_default) {
+                optionElement.selected = true;
+            }
+            timelineSelect.appendChild(optionElement);
+        });
+        
+        console.log(`Loaded ${scoreOptions.length} score options and ${timelineOptions.length} timeline options`);
+    } catch (error) {
+        console.error('Error loading score/timeline options:', error);
     }
 }
 
@@ -396,57 +433,75 @@ save_results(result)`;
 }
 
 /**
- * Submit analysis job to the server
+ * Submit analysis request to the server
  */
-async function submitJob() {
-    const catalog = document.getElementById('catalog').value;
-    const scriptType = document.getElementById('script_type').value;
-    const scriptContent = document.getElementById('script_content').value;
+async function submitRequest() {
+    // Get form data
+    const formData = {
+        requester_name: document.getElementById('requester_name').value,
+        requester_institution: document.getElementById('requester_institution').value,
+        requester_email: document.getElementById('requester_email').value,
+        requester_affiliation: document.getElementById('requester_affiliation').value,
+        analysis_title: document.getElementById('analysis_title').value,
+        research_question: document.getElementById('research_question').value,
+        analysis_description: document.getElementById('analysis_description').value,
+        methodology: document.getElementById('methodology').value,
+        expected_outcomes: document.getElementById('expected_outcomes').value,
+        target_node_id: 'node-1', // For now, assume this node
+        data_catalog_name: document.getElementById('data_catalog').value,
+        selected_score: document.getElementById('selected_score').value,
+        selected_timeline: document.getElementById('selected_timeline').value,
+        script_type: document.getElementById('script_type').value,
+        script_content: document.getElementById('script_content').value,
+        priority: document.getElementById('priority').value,
+        estimated_duration: document.getElementById('estimated_duration').value
+    };
     
-    if (!scriptContent.trim()) {
-        alert('Please enter a script!');
-        return;
+    // Validate required fields
+    const requiredFields = ['requester_name', 'requester_institution', 'requester_email', 
+                           'analysis_title', 'research_question', 'analysis_description', 
+                           'data_catalog_name', 'script_content'];
+    
+    for (const field of requiredFields) {
+        if (!formData[field] || formData[field].trim() === '') {
+            alert(`Please fill in the required field: ${field.replace('_', ' ')}`);
+            return;
+        }
     }
     
     try {
-        // Step 1: Authenticate
-        const authResponse = await fetch('/api/v1/auth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'username=demo&password=demo'
-        });
-        
-        const authData = await authResponse.json();
-        const token = authData.access_token;
-        
-        // Step 2: Submit job
-        const jobResponse = await fetch('/api/v1/jobs', {
+        // Submit request
+        const response = await fetch('/api/v1/analysis-requests', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                target_node_id: 'node-1',
-                data_catalog_name: catalog,
-                script_type: scriptType,
-                script_content: scriptContent,
-                parameters: { submitted_via: 'web_interface' }
-            })
+            body: JSON.stringify(formData)
         });
         
-        const jobData = await jobResponse.json();
-        currentJobId = jobData.job_id;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Request submission failed');
+        }
+        
+        const result = await response.json();
+        currentRequestId = result.request_id;
         
         document.getElementById('results').style.display = 'block';
         document.getElementById('resultsContent').innerHTML = `
-            <p><strong>Job Submitted:</strong> ${currentJobId}</p>
-            <p><span class="status status-running">RUNNING</span> Executing your script...</p>
-            <button onclick="checkResults()">🔄 Check Results</button>
+            <div class="request-status pending">
+                <h3>📝 Analysis Request Submitted</h3>
+                <p><strong>Request ID:</strong> ${result.request_id}</p>
+                <p><strong>Status:</strong> Pending Review</p>
+                <p><strong>Title:</strong> ${result.analysis_title}</p>
+                <p><strong>Submitted:</strong> ${new Date(result.submitted_at).toLocaleString()}</p>
+                <p>Your request has been submitted and is awaiting approval from the data host. You will be notified once it's reviewed.</p>
+                <button onclick="checkRequestStatus()">🔄 Check Status</button>
+            </div>
         `;
         
-        // Auto-check results after a delay
-        setTimeout(checkResults, 3000);
+        // Auto-check status after a delay
+        setTimeout(checkRequestStatus, 5000);
         
     } catch (error) {
         document.getElementById('results').style.display = 'block';
@@ -459,56 +514,54 @@ async function submitJob() {
 }
 
 /**
- * Check the status and results of the current job
+ * Check the status of the current request
  */
-async function checkResults() {
-    if (!currentJobId) return;
+async function checkRequestStatus() {
+    if (!currentRequestId) return;
     
     try {
-        const response = await fetch(`/api/v1/jobs/${currentJobId}`);
+        const response = await fetch(`/api/v1/analysis-requests/${currentRequestId}`);
         const result = await response.json();
         
-        let statusClass = 'status-running';
-        if (result.status === 'completed') statusClass = 'status-completed';
-        if (result.status === 'failed') statusClass = 'status-failed';
+        let statusClass = 'pending';
+        if (result.status === 'approved') statusClass = 'approved';
+        if (result.status === 'denied') statusClass = 'denied';
         
         let content = `
-            <p><strong>Job ID:</strong> ${result.job_id}</p>
-            <p><strong>Status:</strong> <span class="status ${statusClass}">${result.status.toUpperCase()}</span></p>
-            <p><strong>Execution Time:</strong> ${result.execution_time?.toFixed(2) || 'N/A'}s</p>
-            <p><strong>Records Processed:</strong> ${result.records_processed || 'N/A'}</p>
+            <div class="request-status ${statusClass}">
+                <h3>📝 Analysis Request Status</h3>
+                <p><strong>Request ID:</strong> ${result.request_id}</p>
+                <p><strong>Status:</strong> ${result.status.toUpperCase()}</p>
+                <p><strong>Title:</strong> ${result.analysis_title}</p>
+                <p><strong>Submitted:</strong> ${new Date(result.submitted_at).toLocaleString()}</p>
         `;
         
-        if (result.status === 'completed' && result.result_data) {
+        if (result.status === 'approved') {
             content += `
-                <div class="results">
-                    <h4>📊 Analysis Results:</h4>
-                    <div class="code">${JSON.stringify(result.result_data, null, 2)}</div>
-                </div>
+                <p><strong>Approved by:</strong> ${result.approved_by || 'System'}</p>
+                <p><strong>Approved at:</strong> ${result.approved_at ? new Date(result.approved_at).toLocaleString() : 'N/A'}</p>
+                <p>✅ Your request has been approved and the analysis is now running!</p>
+                <button onclick="checkRequestStatus()">🔄 Check Status</button>
             `;
-        } else if (result.status === 'failed') {
+        } else if (result.status === 'denied') {
             content += `
-                <div class="error">
-                    <strong>Error:</strong> ${result.error_message || 'Unknown error'}
-                </div>
+                <p><strong>Denied by:</strong> ${result.approved_by || 'System'}</p>
+                <p><strong>Reason:</strong> ${result.approval_notes || 'No reason provided'}</p>
+                <p>❌ Your request has been denied. Please review the feedback and submit a new request if needed.</p>
             `;
-        } else if (result.status === 'blocked') {
+        } else {
             content += `
-                <div class="error">
-                    <strong>Privacy Block:</strong> ${result.result_data?.message || 'Results blocked due to privacy constraints'}
-                </div>
+                <p>⏳ Your request is still pending review. Please check back later.</p>
+                <button onclick="checkRequestStatus()">🔄 Check Again</button>
             `;
         }
         
-        if (result.status === 'running' || result.status === 'queued') {
-            content += `<button onclick="checkResults()">🔄 Check Again</button>`;
-        }
-        
+        content += '</div>';
         document.getElementById('resultsContent').innerHTML = content;
         
     } catch (error) {
         document.getElementById('resultsContent').innerHTML = `
-            <div class="error">Error checking results: ${error.message}</div>
+            <div class="error">Error checking request status: ${error.message}</div>
         `;
     }
 }

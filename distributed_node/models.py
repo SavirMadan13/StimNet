@@ -21,6 +21,13 @@ class JobStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class RequestStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    DENIED = "denied"
+    EXPIRED = "expired"
+
+
 class ScriptType(str, Enum):
     PYTHON = "python"
     R = "r"
@@ -73,6 +80,7 @@ class Job(Base):
     requester_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
     executor_node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
     data_catalog_id = Column(String, nullable=False)  # Now stores manifest catalog ID (string)
+    analysis_request_id = Column(Integer, ForeignKey("analysis_requests.id"), nullable=True)
     
     script_type = Column(String(50), nullable=False)
     script_content = Column(Text, nullable=False)
@@ -100,6 +108,7 @@ class Job(Base):
     # Relationships
     requester_node = relationship("Node", foreign_keys=[requester_node_id], back_populates="jobs_submitted")
     executor_node = relationship("Node", foreign_keys=[executor_node_id], back_populates="jobs_executed")
+    analysis_request = relationship("AnalysisRequest", back_populates="jobs")
     # Note: data_catalog relationship removed - now using manifest catalog IDs (strings) instead of database IDs
     audit_logs = relationship("AuditLog", back_populates="job")
 
@@ -119,6 +128,73 @@ class AuditLog(Base):
     # Relationships
     job = relationship("Job", back_populates="audit_logs")
     node = relationship("Node")
+
+
+class AnalysisRequest(Base):
+    __tablename__ = "analysis_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(String(100), unique=True, index=True, nullable=False)
+    
+    # Requester information
+    requester_name = Column(String(200), nullable=False)
+    requester_institution = Column(String(200), nullable=False)
+    requester_email = Column(String(200), nullable=False)
+    requester_affiliation = Column(String(200))
+    
+    # Analysis details
+    analysis_title = Column(String(300), nullable=False)
+    analysis_description = Column(Text, nullable=False)
+    research_question = Column(Text, nullable=False)
+    methodology = Column(Text)
+    expected_outcomes = Column(Text)
+    
+    # Data and analysis parameters
+    target_node_id = Column(String(100), nullable=False)
+    data_catalog_name = Column(String(200), nullable=False)
+    selected_score = Column(String(100))  # Selected score/timeline option
+    selected_timeline = Column(String(100))
+    
+    # Script information
+    script_type = Column(String(50), nullable=False)
+    script_content = Column(Text, nullable=False)
+    parameters = Column(JSON)
+    filters = Column(JSON)
+    
+    # Request management
+    status = Column(String(50), default=RequestStatus.PENDING)
+    priority = Column(String(20), default="normal")  # low, normal, high, urgent
+    estimated_duration = Column(String(50))  # e.g., "2 hours", "1 day"
+    
+    # Approval information
+    approved_by = Column(String(200))
+    approval_notes = Column(Text)
+    approved_at = Column(DateTime)
+    expires_at = Column(DateTime)
+    
+    # Timestamps
+    submitted_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    jobs = relationship("Job", back_populates="analysis_request")
+
+
+class ScoreTimelineOption(Base):
+    __tablename__ = "score_timeline_options"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    data_catalog_id = Column(String(100), nullable=False)  # References catalog ID from manifest
+    option_type = Column(String(50), nullable=False)  # "score" or "timeline"
+    option_name = Column(String(200), nullable=False)
+    option_description = Column(Text)
+    option_value = Column(String(200), nullable=False)  # The actual value to use
+    is_default = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relationships
+    # No direct relationships for now, but could link to catalogs
 
 
 # Pydantic Models for API
@@ -221,3 +297,96 @@ class HealthCheckResponse(BaseModel):
     uptime: float
     active_jobs: int
     total_jobs: int
+
+
+# New Pydantic models for analysis requests
+class AnalysisRequestCreate(BaseModel):
+    requester_name: str
+    requester_institution: str
+    requester_email: str
+    requester_affiliation: Optional[str] = None
+    analysis_title: str
+    analysis_description: str
+    research_question: str
+    methodology: Optional[str] = None
+    expected_outcomes: Optional[str] = None
+    target_node_id: str
+    data_catalog_name: str
+    selected_score: Optional[str] = None
+    selected_timeline: Optional[str] = None
+    script_type: ScriptType
+    script_content: str
+    parameters: Optional[Dict[str, Any]] = None
+    filters: Optional[Dict[str, Any]] = None
+    priority: str = "normal"
+    estimated_duration: Optional[str] = None
+
+
+class AnalysisRequestResponse(BaseModel):
+    id: int
+    request_id: str
+    requester_name: str
+    requester_institution: str
+    requester_email: str
+    requester_affiliation: Optional[str]
+    analysis_title: str
+    analysis_description: str
+    research_question: str
+    methodology: Optional[str]
+    expected_outcomes: Optional[str]
+    target_node_id: str
+    data_catalog_name: str
+    selected_score: Optional[str]
+    selected_timeline: Optional[str]
+    script_type: str
+    status: str
+    priority: str
+    estimated_duration: Optional[str]
+    approved_by: Optional[str]
+    approval_notes: Optional[str]
+    approved_at: Optional[datetime]
+    expires_at: Optional[datetime]
+    submitted_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AnalysisRequestUpdate(BaseModel):
+    status: Optional[RequestStatus] = None
+    approved_by: Optional[str] = None
+    approval_notes: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+
+
+class ScoreTimelineOptionResponse(BaseModel):
+    id: int
+    data_catalog_id: str
+    option_type: str
+    option_name: str
+    option_description: Optional[str]
+    option_value: str
+    is_default: bool
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class DataCatalogWithOptionsResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+    data_type: str
+    schema_definition: Optional[Dict[str, Any]]
+    access_level: str
+    total_records: int
+    last_updated: datetime
+    score_options: List[ScoreTimelineOptionResponse] = []
+    timeline_options: List[ScoreTimelineOptionResponse] = []
+    
+    class Config:
+        from_attributes = True
