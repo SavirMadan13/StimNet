@@ -39,10 +39,13 @@ class JobExecutor:
             self.docker_client = docker.from_env()
             self.is_running = True
             self.worker_task = asyncio.create_task(self._worker())
-            logger.info("Job executor started")
+            logger.info("Job executor started with Docker support")
         except Exception as e:
-            logger.error(f"Failed to start job executor: {e}")
-            raise
+            logger.warning(f"Docker not available, running in local mode: {e}")
+            self.docker_client = None
+            self.is_running = True
+            self.worker_task = asyncio.create_task(self._worker())
+            logger.info("Job executor started in local mode (no Docker)")
     
     async def stop(self):
         """Stop the job executor"""
@@ -148,8 +151,12 @@ class JobExecutor:
             db.close()
     
     async def _run_in_container(self, job: Job, db) -> Dict[str, Any]:
-        """Run job script in a Docker container"""
+        """Run job script in a Docker container or locally if Docker unavailable"""
         start_time = time.time()
+        
+        # If Docker is not available, run locally
+        if self.docker_client is None:
+            return await self._run_locally(job, db)
         
         try:
             # Create temporary directory for job files
@@ -303,6 +310,100 @@ class JobExecutor:
             "jupyter": ["jupyter", "nbconvert", "--execute", "/workspace/script.ipynb"]
         }
         return commands.get(script_type.lower(), ["python", "/workspace/script.py"])
+    
+    async def _run_locally(self, job: Job, db) -> Dict[str, Any]:
+        """Run job script locally (fallback when Docker is not available)"""
+        start_time = time.time()
+        
+        try:
+            # Create temporary directory for job files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Prepare script file
+                script_path = os.path.join(temp_dir, f"script.{self._get_file_extension(job.script_type)}")
+                with open(script_path, 'w') as f:
+                    f.write(job.script_content)
+                
+                # Prepare job configuration
+                config_path = os.path.join(temp_dir, "job_config.json")
+                job_config = {
+                    "job_id": job.job_id,
+                    "script_type": job.script_type,
+                    "parameters": job.parameters or {},
+                    "filters": job.filters or {},
+                    "data_catalog_id": job.data_catalog_id
+                }
+                with open(config_path, 'w') as f:
+                    json.dump(job_config, f)
+                
+                # Prepare output file
+                output_path = os.path.join(temp_dir, "output.json")
+                
+                # Set up environment
+                env = os.environ.copy()
+                env.update({
+                    'PYTHONPATH': temp_dir,
+                    'DATA_ROOT': settings.data_root,
+                    'JOB_CONFIG': config_path,
+                    'OUTPUT_FILE': output_path
+                })
+                
+                # For now, only support Python scripts locally
+                if job.script_type.lower() == 'python':
+                    # Create a simple wrapper script
+                    wrapper_script = os.path.join(temp_dir, "wrapper.py")
+                    with open(wrapper_script, 'w') as f:
+                        f.write(PYTHON_WRAPPER_SCRIPT)
+                    
+                    # Run the wrapper script
+                    import subprocess
+                    result = subprocess.run(
+                        ['python', wrapper_script],
+                        cwd=temp_dir,
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        timeout=settings.max_execution_time
+                    )
+                    
+                    execution_time = time.time() - start_time
+                    
+                    # Check exit code
+                    if result.returncode != 0:
+                        return {
+                            "success": False,
+                            "error": f"Script execution failed with exit code {result.returncode}\nStderr: {result.stderr}",
+                            "execution_time": execution_time
+                        }
+                    
+                    # Read output file
+                    if os.path.exists(output_path):
+                        with open(output_path, 'r') as f:
+                            output_data = json.load(f)
+                    else:
+                        output_data = {"message": "No output file generated"}
+                    
+                    return {
+                        "success": True,
+                        "data": output_data,
+                        "execution_time": execution_time,
+                        "memory_used_mb": 0,  # Not available in local mode
+                        "records_processed": output_data.get("records_processed"),
+                        "logs": result.stdout
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Script type {job.script_type} not supported in local mode",
+                        "execution_time": time.time() - start_time
+                    }
+        
+        except Exception as e:
+            logger.error(f"Error running job locally: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "execution_time": time.time() - start_time
+            }
 
 
 # Execution wrapper script for Python jobs

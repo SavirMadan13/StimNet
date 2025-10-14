@@ -1,0 +1,21 @@
+INFO:     Started server process [5151]
+INFO:     Waiting for application startup.
+2025-10-14 14:04:50,455 - distributed_node.main - INFO - Starting StimNet Research Platform v1.0.0
+2025-10-14 14:04:50,455 - distributed_node.main - INFO - Node ID: default-node
+2025-10-14 14:04:50,455 - distributed_node.main - INFO - Institution: Default Institution
+2025-10-14 14:04:50,456 - distributed_node.database - INFO - Database tables created successfully
+2025-10-14 14:04:50,467 - distributed_node.job_executor - WARNING - Docker not available, running in local mode: Error while fetching server API version: ('Connection aborted.', FileNotFoundError(2, 'No such file or directory'))
+2025-10-14 14:04:50,467 - distributed_node.job_executor - INFO - Job executor started in local mode (no Docker)
+2025-10-14 14:04:50,467 - distributed_node.main - INFO - Application startup complete
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8003 (Press CTRL+C to quit)
+INFO:     127.0.0.1:34550 - "GET /api/v1/data-catalogs-with-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36034 - "GET /api/v1/data-catalogs-with-options HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49230 - "GET /api/v1/score-timeline-options/clinical_trial_data HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42910 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56766 - "POST /api/v1/analysis-requests HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:46090 - "POST /api/v1/analysis-requests HTTP/1.1" 200 OK
+2025-10-14 14:06:08,944 - distributed_node.main - INFO - Script uploaded: 577d8933-556e-4d1c-abf5-12db47391a5b_test_script.py (36 bytes)
+INFO:     127.0.0.1:43800 - "POST /api/v1/upload/script HTTP/1.1" 200 OK
+2025-10-14 14:06:15,472 - distributed_node.main - INFO - Data file uploaded: 9e907a87-befb-4afa-9555-c41b3a4c9181_test_data.csv (45 bytes)
+INFO:     127.0.0.1:43810 - "POST /api/v1/upload/data HTTP/1.1" 200 OK
