@@ -33,40 +33,115 @@ SIMPLE_WEB_INTERFACE = """
         </div>
 
         <div class="section">
-            <h2>🧪 Try It Out - Submit Analysis Script</h2>
+            <h2>📝 Submit Analysis Request</h2>
+            <p>Submit a request for data analysis. Your request will be reviewed by the data host before execution.</p>
             
-            <form id="analysisForm">
-                <div class="form-group">
-                    <label>Data Catalog:</label>
-                    <select id="catalog" name="catalog">
-                        <option value="">Loading datasets...</option>
-                    </select>
+            <form id="requestForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="requester_name">Full Name *</label>
+                        <input type="text" id="requester_name" name="requester_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="requester_institution">Institution *</label>
+                        <input type="text" id="requester_institution" name="requester_institution" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="requester_email">Email Address *</label>
+                        <input type="email" id="requester_email" name="requester_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="requester_affiliation">Department/Affiliation</label>
+                        <input type="text" id="requester_affiliation" name="requester_affiliation">
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Script Type:</label>
-                    <select id="script_type" name="script_type">
-                        <option value="python">Python</option>
-                        <option value="r">R</option>
-                    </select>
+                    <label for="analysis_title">Analysis Title *</label>
+                    <input type="text" id="analysis_title" name="analysis_title" required placeholder="Brief title describing your analysis">
                 </div>
 
                 <div class="form-group">
-                    <label>📁 Upload Script File (optional):</label>
-                    <input type="file" id="script_file" accept=".py,.r,.R" onchange="handleScriptUpload(event)">
-                    <p style="font-size: 0.9em; color: #666;">Upload a .py or .R file to automatically populate the script field</p>
+                    <label for="research_question">Research Question *</label>
+                    <textarea id="research_question" name="research_question" required placeholder="What specific research question are you trying to answer?"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>📊 Upload Data File (optional):</label>
-                    <input type="file" id="data_file" accept=".nii,.nii.gz,.csv,.tsv,.npy,.npz,.mat,.json" onchange="handleDataUpload(event)">
-                    <p style="font-size: 0.9em; color: #666;">Upload data files (.nii, .csv, etc.) to use in your analysis</p>
-                    <div id="uploaded_files"></div>
+                    <label for="analysis_description">Analysis Description *</label>
+                    <textarea id="analysis_description" name="analysis_description" required placeholder="Describe your analysis methodology and approach"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>Analysis Script:</label>
-                    <textarea id="script_content" name="script_content" placeholder="Enter your Python or R script here, or upload a file above..."># Import data loading helper (automatically available)
+                    <label for="methodology">Methodology</label>
+                    <textarea id="methodology" name="methodology" placeholder="Detailed methodology (optional)"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="expected_outcomes">Expected Outcomes</label>
+                    <textarea id="expected_outcomes" name="expected_outcomes" placeholder="What outcomes do you expect from this analysis?"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="data_catalog">Data Catalog *</label>
+                        <select id="data_catalog" name="data_catalog" required onchange="loadScoreTimelineOptions()">
+                            <option value="">Select a dataset...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="script_type">Script Type *</label>
+                        <select id="script_type" name="script_type" required>
+                            <option value="python">Python</option>
+                            <option value="r">R</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selected_score">Score/Outcome Measure</label>
+                        <select id="selected_score" name="selected_score">
+                            <option value="">Select score option...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="selected_timeline">Timeline/Analysis Period</label>
+                        <select id="selected_timeline" name="selected_timeline">
+                            <option value="">Select timeline option...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="estimated_duration">Estimated Duration</label>
+                        <select id="estimated_duration" name="estimated_duration">
+                            <option value="">Select duration...</option>
+                            <option value="1 hour">1 hour</option>
+                            <option value="2-4 hours">2-4 hours</option>
+                            <option value="1 day">1 day</option>
+                            <option value="2-3 days">2-3 days</option>
+                            <option value="1 week">1 week</option>
+                            <option value="2+ weeks">2+ weeks</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="script_content">Analysis Script *</label>
+                    <textarea id="script_content" name="script_content" required placeholder="Enter your Python or R script here..."># Import data loading helper (automatically available)
 from data_loader import load_data, save_results
 
 print("🔍 Starting analysis...")
@@ -92,7 +167,20 @@ print(f"✅ Analysis complete!")
 </textarea>
                 </div>
 
-                <button type="button" onclick="submitJob()">🚀 Run Analysis</button>
+                <div class="form-group">
+                    <label>📁 Upload Script File (optional):</label>
+                    <input type="file" id="script_file" accept=".py,.r,.R" onchange="handleScriptUpload(event)">
+                    <p style="font-size: 0.9em; color: #666;">Upload a .py or .R file to automatically populate the script field</p>
+                </div>
+
+                <div class="form-group">
+                    <label>📊 Upload Data File (optional):</label>
+                    <input type="file" id="data_file" accept=".nii,.nii.gz,.csv,.tsv,.npy,.npz,.mat,.json" onchange="handleDataUpload(event)">
+                    <p style="font-size: 0.9em; color: #666;">Upload data files (.nii, .csv, etc.) to use in your analysis</p>
+                    <div id="uploaded_files"></div>
+                </div>
+
+                <button type="button" onclick="submitRequest()">📝 Submit Analysis Request</button>
                 <button type="button" onclick="loadExample('demographics')">📊 Load Demographics Example</button>
                 <button type="button" onclick="loadExample('correlation')">📈 Load Correlation Example</button>
                 <button type="button" onclick="loadExample('damage_score')">🧠 Load Damage Score Example</button>
@@ -157,7 +245,7 @@ save_results(result)</div>
 
         <div id="results" style="display:none;">
             <div class="section">
-                <h2>📊 Analysis Results</h2>
+                <h2>📊 Request Status</h2>
                 <div id="resultsContent"></div>
             </div>
         </div>
@@ -168,6 +256,7 @@ save_results(result)</div>
             <ul>
                 <li><a href="/docs" target="_blank">📚 API Documentation (Swagger)</a></li>
                 <li><a href="/api/v1/data-catalogs" target="_blank">📊 Data Catalogs API</a></li>
+                <li><a href="/api/v1/analysis-requests" target="_blank">📝 Analysis Requests API</a></li>
                 <li><a href="/health" target="_blank">❤️ Health Check</a></li>
             </ul>
             
@@ -176,10 +265,14 @@ save_results(result)</div>
 
 async with DistributedClient("{{base_url}}") as client:
     await client.authenticate("demo", "demo")
-    job_id = await client.submit_script_file("my_analysis.py", 
-                                           target_node_id="node-1",
-                                           data_catalog_name="clinical_trial_data")
-    result = await client.wait_for_job(job_id)</div>
+    request_id = await client.submit_analysis_request({
+        "requester_name": "Dr. Smith",
+        "requester_institution": "University of Research",
+        "analysis_title": "Parkinson's Disease Analysis",
+        "data_catalog_name": "clinical_trial_data",
+        "script_content": "print('Hello World')"
+    })
+    result = await client.wait_for_request(request_id)</div>
         </div>
     </div>
 
