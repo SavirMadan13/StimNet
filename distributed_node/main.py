@@ -4,7 +4,7 @@ Main FastAPI application for distributed node server
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import logging
@@ -12,6 +12,8 @@ import time
 import hashlib
 import uuid
 from datetime import datetime, timedelta
+import shutil
+from pathlib import Path
 
 from .config import settings
 from .database import get_db, init_db
@@ -27,6 +29,7 @@ from .models import (
 from .security import verify_token, create_access_token, get_current_user
 from .job_executor import JobExecutor
 from .remote_data_api import router as remote_api_router
+from .web_interface import get_web_interface_html
 
 # Configure logging
 logging.basicConfig(
@@ -70,6 +73,18 @@ app.include_router(remote_api_router)
 # Startup time for uptime calculation
 startup_time = time.time()
 
+# Upload configuration
+UPLOAD_DIR = Path("uploads")
+SCRIPTS_DIR = UPLOAD_DIR / "scripts"
+DATA_DIR = UPLOAD_DIR / "data"
+
+# Ensure upload directories exist
+SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_SCRIPT_EXTENSIONS = {".py", ".r", ".R"}
+ALLOWED_DATA_EXTENSIONS = {".nii", ".nii.gz", ".csv", ".tsv", ".npy", ".npz", ".mat", ".json"}
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -92,6 +107,14 @@ async def shutdown_event():
     """Cleanup on application shutdown"""
     logger.info("Shutting down application")
     await job_executor.stop()
+
+
+# Web interface endpoint
+@app.get("/", response_class=HTMLResponse)
+async def web_interface():
+    """Main web interface"""
+    base_url = f"http://{settings.host}:{settings.port}"
+    return get_web_interface_html(settings.node_id, base_url)
 
 
 # Health check endpoint
@@ -483,7 +506,7 @@ async def list_data_catalogs_with_options(
             name=catalog_data['name'],
             description=catalog_data.get('description'),
             data_type=catalog_data.get('data_type', 'tabular'),
-            schema_definition=catalog_data.get('files', []),
+            schema_definition={"files": catalog_data.get('files', [])},
             access_level=catalog_data.get('privacy_level', 'private'),
             total_records=sum(file.get('record_count', 0) for file in catalog_data.get('files', [])),
             last_updated=datetime.now(),
@@ -650,6 +673,92 @@ async def admin_interface():
     </html>
     """
     return HTMLResponse(content=html)
+
+
+# File upload endpoints
+@app.post("/api/v1/upload/script")
+async def upload_script(file: UploadFile = File(...)):
+    """Upload a script file (.py or .R)"""
+    try:
+        # Validate file extension
+        file_ext = Path(file.filename).suffix.lower()
+        if file_ext not in ALLOWED_SCRIPT_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_SCRIPT_EXTENSIONS)}"
+            )
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())
+        safe_filename = f"{file_id}_{file.filename}"
+        file_path = SCRIPTS_DIR / safe_filename
+        
+        # Save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Read content for preview
+        with open(file_path, "r") as f:
+            content = f.read()
+        
+        logger.info(f"Script uploaded: {safe_filename} ({len(content)} bytes)")
+        
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "saved_as": safe_filename,
+            "size_bytes": len(content),
+            "content": content,
+            "path": str(file_path)
+        }
+    
+    except Exception as e:
+        logger.error(f"Error uploading script: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/upload/data")
+async def upload_data(file: UploadFile = File(...)):
+    """Upload a data file (.nii, .csv, etc.)"""
+    try:
+        # Validate file extension
+        file_ext = Path(file.filename).suffix.lower()
+        # Handle .nii.gz
+        if file.filename.endswith('.nii.gz'):
+            file_ext = '.nii.gz'
+        
+        if file_ext not in ALLOWED_DATA_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type. Allowed: {', '.join(ALLOWED_DATA_EXTENSIONS)}"
+            )
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())
+        safe_filename = f"{file_id}_{file.filename}"
+        file_path = DATA_DIR / safe_filename
+        
+        # Save file
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_size = file_path.stat().st_size
+        
+        logger.info(f"Data file uploaded: {safe_filename} ({file_size} bytes)")
+        
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "saved_as": safe_filename,
+            "size_bytes": file_size,
+            "path": str(file_path),
+            "type": file_ext,
+            "message": f"File uploaded successfully. Use this file in your analysis script."
+        }
+    
+    except Exception as e:
+        logger.error(f"Error uploading data file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Authentication endpoints
