@@ -251,6 +251,22 @@ save_results(result)</div>
         </div>
 
         <div class="section">
+            <h2>🔍 View Analysis Results</h2>
+            <p>Enter your request ID to view the results of your analysis:</p>
+            
+            <div class="form-group">
+                <label for="request_id_input">Request ID</label>
+                <input type="text" id="request_id_input" placeholder="Enter your request ID (e.g., a49ff15b-6837-4057-b08a-480002ccccd9)">
+                <button type="button" onclick="viewResults()">🔍 View Results</button>
+            </div>
+            
+            <div id="resultsView" style="display:none;">
+                <h3>📊 Analysis Results</h3>
+                <div id="resultsViewContent"></div>
+            </div>
+        </div>
+
+        <div class="section">
             <h2>🔗 API Access</h2>
             <p><strong>For Developers:</strong></p>
             <ul>
@@ -276,7 +292,7 @@ async with DistributedClient("{{base_url}}") as client:
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2"></script>
 </body>
 </html>
 """

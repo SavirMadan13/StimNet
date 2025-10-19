@@ -565,3 +565,95 @@ async function checkRequestStatus() {
         `;
     }
 }
+
+/**
+ * View analysis results for a specific request ID
+ */
+async function viewResults() {
+    console.log('viewResults function called!');
+    alert('viewResults function called!');
+    
+    const requestId = document.getElementById('request_id_input').value.trim();
+    console.log('Viewing results for request ID:', requestId);
+    
+    if (!requestId) {
+        alert('Please enter a request ID');
+        return;
+    }
+    
+    try {
+        console.log('Fetching request details...');
+        // First get the request details
+        const requestResponse = await fetch(`/api/v1/analysis-requests/${requestId}`);
+        if (!requestResponse.ok) {
+            throw new Error('Request not found');
+        }
+        const request = await requestResponse.json();
+        console.log('Request details:', request);
+        
+        // Then get the results
+        console.log('Fetching results...');
+        const resultsResponse = await fetch(`/api/v1/analysis-requests/${requestId}/results`);
+        if (!resultsResponse.ok) {
+            throw new Error('Results not found');
+        }
+        const results = await resultsResponse.json();
+        console.log('Results:', results);
+        
+        // Display the results
+        console.log('Displaying results...');
+        document.getElementById('resultsView').style.display = 'block';
+        
+        let content = `
+            <div class="request-info">
+                <h4>📋 Request Information</h4>
+                <p><strong>Request ID:</strong> ${request.request_id}</p>
+                <p><strong>Title:</strong> ${request.analysis_title}</p>
+                <p><strong>Status:</strong> ${request.status.toUpperCase()}</p>
+                <p><strong>Submitted:</strong> ${new Date(request.submitted_at).toLocaleString()}</p>
+            </div>
+        `;
+        
+        if (results.results && results.results.length > 0) {
+            content += `
+                <div class="results-section">
+                    <h4>📊 Analysis Results (${results.total_results} result${results.total_results !== 1 ? 's' : ''})</h4>
+            `;
+            
+            results.results.forEach((result, index) => {
+                content += `
+                    <div class="result-item">
+                        <h5>Result ${index + 1}: ${result.result_type}</h5>
+                        <p><strong>Created:</strong> ${new Date(result.created_at).toLocaleString()}</p>
+                        <div class="result-data">
+                            <pre>${JSON.stringify(result.result_data, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            content += '</div>';
+        } else {
+            content += `
+                <div class="no-results">
+                    <p>📭 No results available yet. The analysis may still be running or hasn't been completed.</p>
+                    <p><strong>Job Status:</strong> ${results.job_status || 'Unknown'}</p>
+                </div>
+            `;
+        }
+        
+        console.log('Setting content:', content);
+        document.getElementById('resultsViewContent').innerHTML = content;
+        console.log('Content set successfully');
+        
+    } catch (error) {
+        document.getElementById('resultsView').style.display = 'block';
+        document.getElementById('resultsViewContent').innerHTML = `
+            <div class="error">
+                <h4>❌ Error Loading Results</h4>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <p>Please check that the request ID is correct and that the analysis has been completed.</p>
+            </div>
+        `;
+    }
+}

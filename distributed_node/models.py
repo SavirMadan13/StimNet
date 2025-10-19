@@ -339,6 +339,9 @@ class AnalysisRequestResponse(BaseModel):
     selected_score: Optional[str]
     selected_timeline: Optional[str]
     script_type: str
+    script_content: str
+    parameters: Optional[Dict[str, Any]]
+    filters: Optional[Dict[str, Any]]
     status: str
     priority: str
     estimated_duration: Optional[str]
@@ -381,10 +384,11 @@ class DataCatalogWithOptionsResponse(BaseModel):
     name: str
     description: Optional[str]
     data_type: str
-    schema_definition: Optional[Dict[str, Any]]
+    schema_definition: Optional[Dict[str, Any]] = None
     access_level: str
     total_records: int
-    last_updated: datetime
+    last_updated: Optional[datetime] = None
+    files: Optional[List[Dict[str, Any]]] = []
     score_options: List[ScoreTimelineOptionResponse] = []
     timeline_options: List[ScoreTimelineOptionResponse] = []
     
