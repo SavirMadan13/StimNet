@@ -854,7 +854,7 @@ async def list_data_catalogs_with_options(
     """List data catalogs with their score/timeline options"""
     try:
         # Get catalogs from manifest
-        manifest_path = Path(__file__).parent.parent / "data" / "data_manifest.json"
+        manifest_path = Path(__file__).parent.parent / "data" / "data_manifest_copy.json"
         with open(manifest_path, 'r') as f:
             manifest = json.load(f)
         

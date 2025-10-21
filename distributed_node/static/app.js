@@ -304,13 +304,13 @@ function loadExample(type) {
         textarea.value = `# Import data loading helper
 from data_loader import load_data, save_results
 
-print("📊 Demographics Analysis Starting...")
+print("Demographics Analysis Starting...")
 
 # Load data from selected catalog (no paths needed!)
 data = load_data()
 subjects = data['subjects']
 
-print(f"📂 Loaded {len(subjects)} subjects")
+print(f"Loaded {len(subjects)} subjects")
 
 # Calculate demographics
 result = {
@@ -327,8 +327,8 @@ result = {
     "visit_distribution": subjects['visit'].value_counts().to_dict()
 }
 
-print(f"✅ Demographics analysis complete!")
-print(f"👥 {result['total_subjects']} subjects analyzed")
+print(f"Demographics analysis complete!")
+print(f"{result['total_subjects']} subjects analyzed")
 
 # Save results
 save_results(result)`;
@@ -337,18 +337,18 @@ save_results(result)`;
 from data_loader import load_data, save_results
 from scipy import stats
 
-print("📈 Correlation Analysis Starting...")
+print("Correlation Analysis Starting...")
 
 # Load data from selected catalog (no paths needed!)
 data_dict = load_data()
 subjects = data_dict['subjects']
 outcomes = data_dict['outcomes']
 
-print(f"📂 Loaded {len(subjects)} subjects, {len(outcomes)} outcomes")
+print(f"Loaded {len(subjects)} subjects, {len(outcomes)} outcomes")
 
 # Merge datasets
 data = subjects.merge(outcomes, on=['subject_id', 'visit'], how='inner')
-print(f"🔗 Merged dataset: {len(data)} records")
+print(f"Merged dataset: {len(data)} records")
 
 # Correlation analysis
 if len(data) >= 10:
@@ -372,9 +372,9 @@ if len(data) >= 10:
         }
     }
     
-    print(f"✅ Correlation analysis complete!")
-    print(f"📊 Age vs UPDRS: r={corr_age_updrs:.3f}, p={p_age_updrs:.3f}")
-    print(f"📊 QoL vs UPDRS change: r={corr_qol_updrs:.3f}, p={p_qol_updrs:.3f}")
+    print(f"Correlation analysis complete!")
+    print(f"Age vs UPDRS: r={corr_age_updrs:.3f}, p={p_age_updrs:.3f}")
+    print(f"QoL vs UPDRS change: r={corr_qol_updrs:.3f}, p={p_qol_updrs:.3f}")
 else:
     result = {"error": "Insufficient data for correlation analysis"}
 
@@ -387,15 +387,15 @@ from scipy import stats
 import numpy as np
 import nibabel as nib
 
-print("🧠 DBS VTA Damage Score Analysis Starting...")
+print("DBS VTA Damage Score Analysis Starting...")
 
 # Load data from selected catalog
 data = load_data()
 vta_metadata = data['vta_metadata']
 connectivity_map = data['connectivity_map']
 
-print(f"📂 Loaded {len(vta_metadata)} VTA subjects")
-print(f"📂 Loaded connectivity map: {connectivity_map.shape}")
+print(f"Loaded {len(vta_metadata)} VTA subjects")
+print(f"Loaded connectivity map: {connectivity_map.shape}")
 
 # Calculate damage scores (overlap between VTA and connectivity map)
 damage_scores = []
@@ -443,10 +443,10 @@ result = {
     "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
 }
 
-print(f"✅ Damage score analysis complete!")
-print(f"📊 Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
-print(f"📊 Mean damage score: {mean_damage:.3f}")
-print(f"📊 Mean clinical improvement: {mean_improvement:.1f}%")
+print(f"Damage score analysis complete!")
+print(f"Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"Mean damage score: {mean_damage:.3f}")
+print(f"Mean clinical improvement: {mean_improvement:.1f}%")
 
 # Save results
 save_results(result)`;
@@ -467,13 +467,13 @@ async function submitRequest() {
         scriptContent = `# Import data loading helper
 from data_loader import load_data, save_results
 
-print("📊 Demographics Analysis Starting...")
+print("Demographics Analysis Starting...")
 
 # Load data from selected catalog (no paths needed!)
 data = load_data()
 subjects = data['subjects']
 
-print(f"📂 Loaded {len(subjects)} subjects")
+print(f"Loaded {len(subjects)} subjects")
 
 # Calculate demographics
 result = {
@@ -489,9 +489,9 @@ result = {
     "diagnosis_breakdown": subjects['diagnosis'].value_counts().to_dict()
 }
 
-print(f"✅ Demographics analysis complete!")
-print(f"📊 Total subjects: {result['total_subjects']}")
-print(f"📊 Age range: {result['age_statistics']['min']}-{result['age_statistics']['max']}")
+print(f"Demographics analysis complete!")
+print(f"Total subjects: {result['total_subjects']}")
+print(f"Age range: {result['age_statistics']['min']}-{result['age_statistics']['max']}")
 
 # Save results
 save_results(result)`;
@@ -501,7 +501,7 @@ from data_loader import load_data, save_results
 from scipy import stats
 import numpy as np
 
-print("📈 Correlation Analysis Starting...")
+print("Correlation Analysis Starting...")
 
 # Load data from selected catalog (no paths needed!)
 data_dict = load_data()
@@ -524,9 +524,9 @@ result = {
     "significant": p_val < 0.05
 }
 
-print(f"✅ Correlation analysis complete!")
-print(f"📊 Age-UPDRS correlation: r={corr:.3f}, p={p_val:.3f}")
-print(f"📊 Sample size: {len(data)}")
+print(f"Correlation analysis complete!")
+print(f"Age-UPDRS correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"Sample size: {len(data)}")
 
 # Save results
 save_results(result)`;
@@ -537,15 +537,15 @@ from scipy import stats
 import numpy as np
 import nibabel as nib
 
-print("🧠 DBS VTA Damage Score Analysis Starting...")
+print("DBS VTA Damage Score Analysis Starting...")
 
 # Load data from selected catalog
 data = load_data()
 vta_metadata = data['vta_metadata']
 connectivity_map = data['connectivity_map']
 
-print(f"📂 Loaded {len(vta_metadata)} VTA subjects")
-print(f"📂 Loaded connectivity map: {connectivity_map.shape}")
+print(f"Loaded {len(vta_metadata)} VTA subjects")
+print(f"Loaded connectivity map: {connectivity_map.shape}")
 
 # Calculate damage scores (overlap between VTA and connectivity map)
 damage_scores = []
@@ -593,10 +593,10 @@ result = {
     "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
 }
 
-print(f"✅ Damage score analysis complete!")
-print(f"📊 Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
-print(f"📊 Mean damage score: {mean_damage:.3f}")
-print(f"📊 Mean clinical improvement: {mean_improvement:.1f}%")
+print(f"Damage score analysis complete!")
+print(f"Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"Mean damage score: {mean_damage:.3f}")
+print(f"Mean clinical improvement: {mean_improvement:.1f}%")
 
 # Save results
 save_results(result)`;
@@ -658,7 +658,7 @@ save_results(result)`;
         document.getElementById('results').style.display = 'block';
         document.getElementById('resultsContent').innerHTML = `
             <div class="request-status pending">
-                <h3>📝 Analysis Request Submitted</h3>
+                <h3>Analysis Request Submitted</h3>
                 <p><strong>Request ID:</strong> ${result.request_id}</p>
                 <p><strong>Status:</strong> Pending Review</p>
                 <p><strong>Title:</strong> ${result.analysis_title}</p>
@@ -697,7 +697,7 @@ async function checkRequestStatus() {
         
         let content = `
             <div class="request-status ${statusClass}">
-                <h3>📝 Analysis Request Status</h3>
+                <h3>Analysis Request Status</h3>
                 <p><strong>Request ID:</strong> ${result.request_id}</p>
                 <p><strong>Status:</strong> ${result.status.toUpperCase()}</p>
                 <p><strong>Title:</strong> ${result.analysis_title}</p>
@@ -774,7 +774,7 @@ async function viewResults() {
         
         let content = `
             <div class="request-info">
-                <h4>📋 Request Information</h4>
+                <h4>Request Information</h4>
                 <p><strong>Request ID:</strong> ${request.request_id}</p>
                 <p><strong>Title:</strong> ${request.analysis_title}</p>
                 <p><strong>Status:</strong> ${request.status.toUpperCase()}</p>
@@ -785,7 +785,7 @@ async function viewResults() {
         if (results.results && results.results.length > 0) {
             content += `
                 <div class="results-section">
-                    <h4>📊 Analysis Results (${results.total_results} result${results.total_results !== 1 ? 's' : ''})</h4>
+                    <h4>Analysis Results (${results.total_results} result${results.total_results !== 1 ? 's' : ''})</h4>
             `;
             
             results.results.forEach((result, index) => {

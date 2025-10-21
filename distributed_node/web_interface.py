@@ -20,20 +20,21 @@ SIMPLE_WEB_INTERFACE = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>🧠 StimNet Research Platform</h1>
+            <h1>StimNet Research Platform</h1>
             <p>Collaborative neuroscience data analysis across institutions</p>
             <p><strong>Node:</strong> {{node_id}} | <strong>Status:</strong> <span class="status status-completed">HEALTHY</span></p>
+            <h1>🧠 </h1>
         </div>
 
         <div class="section">
-            <h2>📊 Available Data Catalogs</h2>
+            <h2>Available Data Catalogs</h2>
             <div id="catalogsInfo">
                 <p>Loading available datasets...</p>
             </div>
         </div>
 
         <div class="section">
-            <h2>📝 Submit Analysis Request</h2>
+            <h2>Submit Analysis Request</h2>
             <p>Submit a request for data analysis. Your request will be reviewed by the data host before execution.</p>
             
             <form id="requestForm">
@@ -119,10 +120,10 @@ SIMPLE_WEB_INTERFACE = """
                     <label for="script_type">Script Type *</label>
                     <select id="script_type" name="script_type" required onchange="handleScriptTypeChange()">
                         <option value="">Select a script type...</option>
-                        <option value="demographics">📊 Demographics Analysis</option>
-                        <option value="correlation">📈 Correlation Analysis</option>
-                        <option value="damage_score">🧠 DBS Damage Score Analysis</option>
-                        <option value="custom">✏️ Custom Script</option>
+                        <option value="demographics">Demographics Analysis</option>
+                        <option value="correlation">Correlation Analysis</option>
+                        <option value="damage_score">DBS Damage Score Analysis</option>
+                        <option value="custom">Custom Script</option>
                     </select>
                 </div>
 
@@ -132,27 +133,76 @@ SIMPLE_WEB_INTERFACE = """
                 </div>
 
                 <div class="form-group">
-                    <label>📁 Upload Script File (optional):</label>
+                    <label>Upload Script File (optional):</label>
                     <input type="file" id="script_file" accept=".py" onchange="handleScriptUpload(event)">
                     <p style="font-size: 0.9em; color: #666;">Upload a .py file to automatically populate the script field</p>
                 </div>
 
                 <div class="form-group">
-                    <label>📊 Upload Data File (optional):</label>
+                    <label>Upload Data File (optional):</label>
                     <input type="file" id="data_file" accept=".nii,.nii.gz,.csv,.tsv,.npy,.npz,.mat,.json" onchange="handleDataUpload(event)">
                     <p style="font-size: 0.9em; color: #666;">Upload data files (.nii, .csv, etc.) to use in your analysis</p>
                     <div id="uploaded_files"></div>
                 </div>
 
-                <button type="button" onclick="submitRequest()">📝 Submit Analysis Request</button>
+                <button type="button" onclick="submitRequest()">Submit Analysis Request</button>
             </form>
         </div>
 
+
+        <div id="results" style="display:none;">
+            <div class="section">
+                <h2>📊 Request Status</h2>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+
         <div class="section">
-            <h2>📋 Example Scripts</h2>
+            <h2>View Analysis Results</h2>
+            <p>Enter your request ID to view the results of your analysis:</p>
+            
+            <div class="form-group">
+                <label for="request_id_input">Request ID</label>
+                <input type="text" id="request_id_input" placeholder="Enter your request ID (e.g., a49ff15b-6837-4057-b08a-480002ccccd9)">
+                <button type="button" onclick="viewResults()">View Results</button>
+            </div>
+            
+            <div id="resultsView" style="display:none;">
+                <h3>Analysis Results</h3>
+                <div id="resultsViewContent"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>API Access</h2>
+            <p><strong>For Developers:</strong></p>
+            <ul>
+                <li><a href="/docs" target="_blank">API Documentation (Swagger)</a></li>
+                <li><a href="/api/v1/data-catalogs" target="_blank">Data Catalogs API</a></li>
+                <li><a href="/api/v1/analysis-requests" target="_blank">Analysis Requests API</a></li>
+                <li><a href="/health" target="_blank">Health Check</a></li>
+            </ul>
+            
+            <p><strong>Python Client SDK:</strong></p>
+            <div class="code">from client_sdk import DistributedClient
+
+async with DistributedClient("{{base_url}}") as client:
+    await client.authenticate("demo", "demo")
+    request_id = await client.submit_analysis_request({
+        "requester_name": "Dr. Smith",
+        "requester_institution": "University of Research",
+        "analysis_title": "Parkinson's Disease Analysis",
+        "data_catalog_name": "clinical_trial_data",
+        "script_content": "print('Hello World')"
+    })
+    result = await client.wait_for_request(request_id)</div>
+        </div>
+
+        <div class="section">
+            <h2>Example Scripts</h2>
             
             <div class="example-script">
-                <h4>📊 Demographics Analysis</h4>
+                <h4>Demographics Analysis</h4>
                 <div class="code"># Import data loading helper
 from data_loader import load_data, save_results
 
@@ -202,54 +252,79 @@ result = {
 # Save results
 save_results(result)</div>
             </div>
-        </div>
 
-        <div id="results" style="display:none;">
-            <div class="section">
-                <h2>📊 Request Status</h2>
-                <div id="resultsContent"></div>
+            <div class="example-script">
+                <h4>DBS Damage Score Analysis</h4>
+                <div class="code"># Import data loading helper
+from data_loader import load_data, save_results
+from scipy import stats
+import numpy as np
+import nibabel as nib
+
+print("DBS VTA Damage Score Analysis Starting...")
+
+# Load data from selected catalog
+data = load_data()
+vta_metadata = data['vta_metadata']
+connectivity_map = data['connectivity_map']
+
+print(f"Loaded {len(vta_metadata)} VTA subjects")
+print(f"Loaded connectivity map: {connectivity_map.shape}")
+
+# Calculate damage scores (overlap between VTA and connectivity map)
+damage_scores = []
+clinical_improvements = []
+
+for idx, row in vta_metadata.iterrows():
+    # In real analysis, load each VTA file and calculate overlap
+    # For demo, we'll use synthetic damage scores
+    # Simulate realistic correlation between damage and outcome
+    base_damage = np.random.normal(0.5, 0.15)
+    base_damage = max(0.1, min(0.9, base_damage))
+
+    # Add some realistic noise
+    noise = np.random.normal(0, 0.1)
+    damage_score = base_damage + noise
+
+    damage_scores.append(damage_score)
+    clinical_improvements.append(row['clinical_improvement'])
+
+# Convert to numpy arrays
+damage_scores = np.array(damage_scores)
+clinical_improvements = np.array(clinical_improvements)
+
+# Calculate correlation
+corr, p_val = stats.pearsonr(damage_scores, clinical_improvements)
+
+# Additional statistics
+mean_damage = float(np.mean(damage_scores))
+mean_improvement = float(np.mean(clinical_improvements))
+
+result = {
+    "analysis_type": "dbs_damage_score",
+    "sample_size": len(vta_metadata),
+    "correlation": {
+        "correlation_coefficient": float(corr),
+        "p_value": float(p_val),
+        "significant": p_val < 0.05
+    },
+    "summary_statistics": {
+        "mean_damage_score": mean_damage,
+        "mean_clinical_improvement": mean_improvement,
+        "damage_score_range": [float(np.min(damage_scores)), float(np.max(damage_scores))],
+        "improvement_range": [float(np.min(clinical_improvements)), float(np.max(clinical_improvements))]
+    },
+    "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
+}
+
+print(f"Damage score analysis complete!")
+print(f"Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"Mean damage score: {mean_damage:.3f}")
+print(f"Mean clinical improvement: {mean_improvement:.1f}%")
+
+# Save results
+save_results(result)</div>
             </div>
-        </div>
-
-        <div class="section">
-            <h2>🔍 View Analysis Results</h2>
-            <p>Enter your request ID to view the results of your analysis:</p>
-            
-            <div class="form-group">
-                <label for="request_id_input">Request ID</label>
-                <input type="text" id="request_id_input" placeholder="Enter your request ID (e.g., a49ff15b-6837-4057-b08a-480002ccccd9)">
-                <button type="button" onclick="viewResults()">🔍 View Results</button>
-            </div>
-            
-            <div id="resultsView" style="display:none;">
-                <h3>📊 Analysis Results</h3>
-                <div id="resultsViewContent"></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>🔗 API Access</h2>
-            <p><strong>For Developers:</strong></p>
-            <ul>
-                <li><a href="/docs" target="_blank">📚 API Documentation (Swagger)</a></li>
-                <li><a href="/api/v1/data-catalogs" target="_blank">📊 Data Catalogs API</a></li>
-                <li><a href="/api/v1/analysis-requests" target="_blank">📝 Analysis Requests API</a></li>
-                <li><a href="/health" target="_blank">❤️ Health Check</a></li>
-            </ul>
-            
-            <p><strong>Python Client SDK:</strong></p>
-            <div class="code">from client_sdk import DistributedClient
-
-async with DistributedClient("{{base_url}}") as client:
-    await client.authenticate("demo", "demo")
-    request_id = await client.submit_analysis_request({
-        "requester_name": "Dr. Smith",
-        "requester_institution": "University of Research",
-        "analysis_title": "Parkinson's Disease Analysis",
-        "data_catalog_name": "clinical_trial_data",
-        "script_content": "print('Hello World')"
-    })
-    result = await client.wait_for_request(request_id)</div>
         </div>
     </div>
 

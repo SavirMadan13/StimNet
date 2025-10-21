@@ -33,6 +33,8 @@ venv.bak/
 # StimNet Specific
 # Job execution workspace - contains temporary analysis files
 work/
+# Data folder - contains datasets and manifests
+data/
 # Database files
 *.db
 *.sqlite
