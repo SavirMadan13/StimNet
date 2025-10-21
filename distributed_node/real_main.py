@@ -672,9 +672,6 @@ async def create_analysis_request(
             requester_affiliation=request.requester_affiliation,
             analysis_title=request.analysis_title,
             analysis_description=request.analysis_description,
-            research_question=request.research_question,
-            methodology=request.methodology,
-            expected_outcomes=request.expected_outcomes,
             target_node_id=request.target_node_id,
             data_catalog_name=request.data_catalog_name,
             selected_score=request.selected_score,
@@ -988,7 +985,6 @@ async def admin_interface():
                             data_catalog_name: request.data_catalog_name || 'Unknown Dataset',
                             priority: request.priority || 'normal',
                             submitted_at: request.submitted_at || new Date().toISOString(),
-                            research_question: request.research_question || 'No research question provided',
                             analysis_description: request.analysis_description || 'No description provided',
                             script_content: request.script_content || ''
                         };
@@ -1007,7 +1003,6 @@ async def admin_interface():
                                     <strong>Submitted:</strong> ${new Date(safeRequest.submitted_at).toLocaleString()}
                                 </div>
                                 <div class="request-description">
-                                    <strong>Research Question:</strong> ${safeRequest.research_question}<br>
                                     <strong>Description:</strong> ${safeRequest.analysis_description}
                                 </div>
                                 <div class="script-preview">

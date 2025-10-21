@@ -188,13 +188,8 @@ async function handleScriptUpload(event) {
         // Populate textarea with uploaded script content
         textarea.value = result.content;
         
-        // Update script type based on file extension
-        const scriptType = document.getElementById('script_type');
-        if (file.name.endsWith('.py')) {
-            scriptType.value = 'python';
-        } else if (file.name.endsWith('.r') || file.name.endsWith('.R')) {
-            scriptType.value = 'r';
-        }
+        // Script type is always Python
+        console.log('Script uploaded - will be processed as Python');
         
         console.log(`Script uploaded: ${result.filename} (${result.size_bytes} bytes)`);
         alert(`✅ Script uploaded successfully: ${result.filename}`);
@@ -273,8 +268,34 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
+ * Handle script type dropdown change
+ */
+function handleScriptTypeChange() {
+    const scriptType = document.getElementById('script_type').value;
+    const scriptContentGroup = document.getElementById('script_content_group');
+    const scriptContent = document.getElementById('script_content');
+    
+    if (scriptType === 'custom') {
+        // Show the script content textarea for custom scripts
+        scriptContentGroup.style.display = 'block';
+        scriptContent.required = true;
+        scriptContent.value = ''; // Clear any existing content
+    } else if (scriptType && scriptType !== 'custom') {
+        // Load the selected example script
+        scriptContentGroup.style.display = 'block';
+        scriptContent.required = true;
+        loadExample(scriptType);
+    } else {
+        // Hide the script content textarea
+        scriptContentGroup.style.display = 'none';
+        scriptContent.required = false;
+        scriptContent.value = '';
+    }
+}
+
+/**
  * Load example script into the textarea
- * @param {string} type - 'demographics' or 'correlation'
+ * @param {string} type - 'demographics', 'correlation', or 'damage_score'
  */
 function loadExample(type) {
     const textarea = document.getElementById('script_content');
@@ -436,6 +457,151 @@ save_results(result)`;
  * Submit analysis request to the server
  */
 async function submitRequest() {
+    // Get script content based on selection
+    const scriptTypeSelection = document.getElementById('script_type').value;
+    let scriptContent = '';
+    
+    if (scriptTypeSelection === 'custom') {
+        scriptContent = document.getElementById('script_content').value;
+    } else if (scriptTypeSelection === 'demographics') {
+        scriptContent = `# Import data loading helper
+from data_loader import load_data, save_results
+
+print("📊 Demographics Analysis Starting...")
+
+# Load data from selected catalog (no paths needed!)
+data = load_data()
+subjects = data['subjects']
+
+print(f"📂 Loaded {len(subjects)} subjects")
+
+# Calculate demographics
+result = {
+    "analysis_type": "demographics",
+    "total_subjects": len(subjects),
+    "age_statistics": {
+        "mean": float(subjects['age'].mean()),
+        "std": float(subjects['age'].std()),
+        "min": int(subjects['age'].min()),
+        "max": int(subjects['age'].max())
+    },
+    "sex_distribution": subjects['sex'].value_counts().to_dict(),
+    "diagnosis_breakdown": subjects['diagnosis'].value_counts().to_dict()
+}
+
+print(f"✅ Demographics analysis complete!")
+print(f"📊 Total subjects: {result['total_subjects']}")
+print(f"📊 Age range: {result['age_statistics']['min']}-{result['age_statistics']['max']}")
+
+# Save results
+save_results(result)`;
+    } else if (scriptTypeSelection === 'correlation') {
+        scriptContent = `# Import data loading helper
+from data_loader import load_data, save_results
+from scipy import stats
+import numpy as np
+
+print("📈 Correlation Analysis Starting...")
+
+# Load data from selected catalog (no paths needed!)
+data_dict = load_data()
+subjects = data_dict['subjects']
+outcomes = data_dict['outcomes']
+
+print(f"📂 Loaded {len(subjects)} subjects and {len(outcomes)} outcome records")
+
+# Merge datasets
+data = subjects.merge(outcomes, on=['subject_id', 'visit'])
+
+# Correlation analysis
+corr, p_val = stats.pearsonr(data['age'], data['UPDRS_total'])
+
+result = {
+    "analysis_type": "correlation",
+    "correlation": float(corr),
+    "p_value": float(p_val),
+    "sample_size": len(data),
+    "significant": p_val < 0.05
+}
+
+print(f"✅ Correlation analysis complete!")
+print(f"📊 Age-UPDRS correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"📊 Sample size: {len(data)}")
+
+# Save results
+save_results(result)`;
+    } else if (scriptTypeSelection === 'damage_score') {
+        scriptContent = `# Import data loading helper
+from data_loader import load_data, save_results
+from scipy import stats
+import numpy as np
+import nibabel as nib
+
+print("🧠 DBS VTA Damage Score Analysis Starting...")
+
+# Load data from selected catalog
+data = load_data()
+vta_metadata = data['vta_metadata']
+connectivity_map = data['connectivity_map']
+
+print(f"📂 Loaded {len(vta_metadata)} VTA subjects")
+print(f"📂 Loaded connectivity map: {connectivity_map.shape}")
+
+# Calculate damage scores (overlap between VTA and connectivity map)
+damage_scores = []
+clinical_improvements = []
+
+for idx, row in vta_metadata.iterrows():
+    # In real analysis, load each VTA file and calculate overlap
+    # For demo, we'll use synthetic damage scores
+    # Simulate realistic correlation between damage and outcome
+    base_damage = np.random.normal(0.5, 0.15)
+    base_damage = max(0.1, min(0.9, base_damage))
+
+    # Add some realistic noise
+    noise = np.random.normal(0, 0.1)
+    damage_score = base_damage + noise
+
+    damage_scores.append(damage_score)
+    clinical_improvements.append(row['clinical_improvement'])
+
+# Convert to numpy arrays
+damage_scores = np.array(damage_scores)
+clinical_improvements = np.array(clinical_improvements)
+
+# Calculate correlation
+corr, p_val = stats.pearsonr(damage_scores, clinical_improvements)
+
+# Additional statistics
+mean_damage = float(np.mean(damage_scores))
+mean_improvement = float(np.mean(clinical_improvements))
+
+result = {
+    "analysis_type": "dbs_damage_score",
+    "sample_size": len(vta_metadata),
+    "correlation": {
+        "correlation_coefficient": float(corr),
+        "p_value": float(p_val),
+        "significant": p_val < 0.05
+    },
+    "summary_statistics": {
+        "mean_damage_score": mean_damage,
+        "mean_clinical_improvement": mean_improvement,
+        "damage_score_range": [float(np.min(damage_scores)), float(np.max(damage_scores))],
+        "improvement_range": [float(np.min(clinical_improvements)), float(np.max(clinical_improvements))]
+    },
+    "interpretation": "Higher damage scores indicate greater VTA overlap with connectivity map"
+}
+
+print(f"✅ Damage score analysis complete!")
+print(f"📊 Damage-Outcome correlation: r={corr:.3f}, p={p_val:.3f}")
+print(f"📊 Mean damage score: {mean_damage:.3f}")
+print(f"📊 Mean clinical improvement: {mean_improvement:.1f}%")
+
+# Save results
+save_results(result)`;
+    }
+
     // Get form data
     const formData = {
         requester_name: document.getElementById('requester_name').value,
@@ -443,24 +609,26 @@ async function submitRequest() {
         requester_email: document.getElementById('requester_email').value,
         requester_affiliation: document.getElementById('requester_affiliation').value,
         analysis_title: document.getElementById('analysis_title').value,
-        research_question: document.getElementById('research_question').value,
         analysis_description: document.getElementById('analysis_description').value,
-        methodology: document.getElementById('methodology').value,
-        expected_outcomes: document.getElementById('expected_outcomes').value,
         target_node_id: 'node-1', // For now, assume this node
         data_catalog_name: document.getElementById('data_catalog').value,
         selected_score: document.getElementById('selected_score').value,
         selected_timeline: document.getElementById('selected_timeline').value,
-        script_type: document.getElementById('script_type').value,
-        script_content: document.getElementById('script_content').value,
+        script_type: 'python', // Always Python
+        script_content: scriptContent,
         priority: document.getElementById('priority').value,
         estimated_duration: document.getElementById('estimated_duration').value
     };
     
     // Validate required fields
     const requiredFields = ['requester_name', 'requester_institution', 'requester_email', 
-                           'analysis_title', 'research_question', 'analysis_description', 
-                           'data_catalog_name', 'script_content'];
+                           'analysis_title', 'analysis_description', 'data_catalog_name'];
+    
+    // Add script_content to validation only if custom script is selected
+    const scriptType = document.getElementById('script_type').value;
+    if (scriptType === 'custom') {
+        requiredFields.push('script_content');
+    }
     
     for (const field of requiredFields) {
         if (!formData[field] || formData[field].trim() === '') {

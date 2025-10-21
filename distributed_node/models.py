@@ -145,9 +145,6 @@ class AnalysisRequest(Base):
     # Analysis details
     analysis_title = Column(String(300), nullable=False)
     analysis_description = Column(Text, nullable=False)
-    research_question = Column(Text, nullable=False)
-    methodology = Column(Text)
-    expected_outcomes = Column(Text)
     
     # Data and analysis parameters
     target_node_id = Column(String(100), nullable=False)
@@ -307,9 +304,6 @@ class AnalysisRequestCreate(BaseModel):
     requester_affiliation: Optional[str] = None
     analysis_title: str
     analysis_description: str
-    research_question: str
-    methodology: Optional[str] = None
-    expected_outcomes: Optional[str] = None
     target_node_id: str
     data_catalog_name: str
     selected_score: Optional[str] = None
@@ -331,9 +325,6 @@ class AnalysisRequestResponse(BaseModel):
     requester_affiliation: Optional[str]
     analysis_title: str
     analysis_description: str
-    research_question: str
-    methodology: Optional[str]
-    expected_outcomes: Optional[str]
     target_node_id: str
     data_catalog_name: str
     selected_score: Optional[str]

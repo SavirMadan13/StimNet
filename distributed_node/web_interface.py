@@ -65,39 +65,15 @@ SIMPLE_WEB_INTERFACE = """
                 </div>
 
                 <div class="form-group">
-                    <label for="research_question">Research Question *</label>
-                    <textarea id="research_question" name="research_question" required placeholder="What specific research question are you trying to answer?"></textarea>
-                </div>
-
-                <div class="form-group">
                     <label for="analysis_description">Analysis Description *</label>
                     <textarea id="analysis_description" name="analysis_description" required placeholder="Describe your analysis methodology and approach"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label for="methodology">Methodology</label>
-                    <textarea id="methodology" name="methodology" placeholder="Detailed methodology (optional)"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="expected_outcomes">Expected Outcomes</label>
-                    <textarea id="expected_outcomes" name="expected_outcomes" placeholder="What outcomes do you expect from this analysis?"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="data_catalog">Data Catalog *</label>
-                        <select id="data_catalog" name="data_catalog" required onchange="loadScoreTimelineOptions()">
-                            <option value="">Select a dataset...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="script_type">Script Type *</label>
-                        <select id="script_type" name="script_type" required>
-                            <option value="python">Python</option>
-                            <option value="r">R</option>
-                        </select>
-                    </div>
+                    <label for="data_catalog">Data Catalog *</label>
+                    <select id="data_catalog" name="data_catalog" required onchange="loadScoreTimelineOptions()">
+                        <option value="">Select a dataset...</option>
+                    </select>
                 </div>
 
                 <div class="form-row">
@@ -140,37 +116,25 @@ SIMPLE_WEB_INTERFACE = """
                 </div>
 
                 <div class="form-group">
+                    <label for="script_type">Script Type *</label>
+                    <select id="script_type" name="script_type" required onchange="handleScriptTypeChange()">
+                        <option value="">Select a script type...</option>
+                        <option value="demographics">📊 Demographics Analysis</option>
+                        <option value="correlation">📈 Correlation Analysis</option>
+                        <option value="damage_score">🧠 DBS Damage Score Analysis</option>
+                        <option value="custom">✏️ Custom Script</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="script_content_group" style="display: none;">
                     <label for="script_content">Analysis Script *</label>
-                    <textarea id="script_content" name="script_content" required placeholder="Enter your Python or R script here..."># Import data loading helper (automatically available)
-from data_loader import load_data, save_results
-
-print("🔍 Starting analysis...")
-
-# Load data from selected catalog (no paths needed!)
-data = load_data()
-
-# Access your data by name
-subjects = data['subjects']
-print(f"📊 Loaded {len(subjects)} subjects")
-
-# Your analysis here
-result = {
-    "sample_size": len(subjects),
-    "age_mean": float(subjects['age'].mean()),
-    "sex_distribution": subjects['sex'].value_counts().to_dict(),
-    "analysis_complete": True
-}
-
-# Save results
-save_results(result)
-print(f"✅ Analysis complete!")
-</textarea>
+                    <textarea id="script_content" name="script_content" placeholder="Enter your Python script here..."></textarea>
                 </div>
 
                 <div class="form-group">
                     <label>📁 Upload Script File (optional):</label>
-                    <input type="file" id="script_file" accept=".py,.r,.R" onchange="handleScriptUpload(event)">
-                    <p style="font-size: 0.9em; color: #666;">Upload a .py or .R file to automatically populate the script field</p>
+                    <input type="file" id="script_file" accept=".py" onchange="handleScriptUpload(event)">
+                    <p style="font-size: 0.9em; color: #666;">Upload a .py file to automatically populate the script field</p>
                 </div>
 
                 <div class="form-group">
@@ -181,9 +145,6 @@ print(f"✅ Analysis complete!")
                 </div>
 
                 <button type="button" onclick="submitRequest()">📝 Submit Analysis Request</button>
-                <button type="button" onclick="loadExample('demographics')">📊 Load Demographics Example</button>
-                <button type="button" onclick="loadExample('correlation')">📈 Load Correlation Example</button>
-                <button type="button" onclick="loadExample('damage_score')">🧠 Load Damage Score Example</button>
             </form>
         </div>
 
