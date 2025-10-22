@@ -836,3 +836,19 @@ async function viewResults() {
         `;
     }
 }
+
+/**
+ * Toggle catalog content visibility
+ */
+function toggleCatalog(catalogId) {
+    const content = document.getElementById(`content-${catalogId}`);
+    const toggle = document.getElementById(`toggle-${catalogId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        toggle.textContent = '▼';
+    }
+}

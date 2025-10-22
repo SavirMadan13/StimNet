@@ -871,12 +871,80 @@ async def get_score_timeline_options(
     db: Session = Depends(get_db)
 ):
     """Get available score and timeline options for a data catalog"""
+    # First try to get options from database
     options = db.query(ScoreTimelineOption).filter(
         ScoreTimelineOption.data_catalog_id == catalog_id,
         ScoreTimelineOption.is_active == True
     ).all()
     
-    return [ScoreTimelineOptionResponse.from_orm(option) for option in options]
+    if options:
+        return [ScoreTimelineOptionResponse.from_orm(option) for option in options]
+    
+    # If no database options, generate dynamically from outcomes.csv
+    try:
+        manifest_path = Path(__file__).parent.parent / "data" / "data_manifest_simple.json"
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+        
+        # Find the catalog
+        catalog_data = None
+        for catalog in manifest.get("catalogs", []):
+            if catalog["id"] == catalog_id:
+                catalog_data = catalog
+                break
+        
+        if not catalog_data:
+            return []
+        
+        # Find outcomes.csv file
+        outcomes_file = None
+        for file_info in catalog_data.get("files", []):
+            if file_info.get("name") == "outcomes" and file_info.get("type") == "csv":
+                outcomes_file = file_info
+                break
+        
+        if not outcomes_file:
+            return []
+        
+        # Read outcomes.csv and extract column names
+        import pandas as pd
+        file_path = Path(outcomes_file["path"])
+        if not file_path.exists():
+            return []
+        
+        df = pd.read_csv(file_path)
+        
+        # Generate score options from column names (excluding ID columns)
+        score_options = []
+        id_columns = {'id', 'subject_id', 'patient_id', 'participant_id', 'subject', 'patient', 'participant'}
+        
+        for col in df.columns:
+            col_lower = col.lower().strip()
+            if col_lower not in id_columns and not col_lower.startswith('id'):
+                # Determine column type
+                dtype = str(df[col].dtype)
+                if dtype.startswith('int') or dtype.startswith('float'):
+                    option_type = "score"
+                else:
+                    option_type = "score"  # Treat all non-ID columns as potential scores
+                
+                score_options.append({
+                    "id": len(score_options) + 1,
+                    "data_catalog_id": catalog_id,
+                    "option_type": option_type,
+                    "option_name": col,
+                    "option_description": f"Score from {col} column",
+                    "option_value": col,
+                    "is_default": len(score_options) == 0,  # First option is default
+                    "is_active": True,
+                    "created_at": "2025-10-22T16:30:00Z"
+                })
+        
+        return score_options
+        
+    except Exception as e:
+        logger.error(f"Error generating dynamic score options for {catalog_id}: {e}")
+        return []
 
 
 @app.get("/api/v1/data-catalogs-with-options", response_model=List[DataCatalogWithOptionsResponse])
