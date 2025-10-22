@@ -33,49 +33,60 @@ async function loadDataCatalogs() {
             catalogs.forEach(catalog => {
                 const recordCount = catalog.total_records || 'Unknown';
                 
-                // Build score options list
-                let scoreOptionsHtml = '';
-                if (catalog.score_options && catalog.score_options.length > 0) {
-                    scoreOptionsHtml = '<ul class="option-list">';
-                    catalog.score_options.forEach(option => {
-                        scoreOptionsHtml += `<li>${option.option_name}${option.is_default ? ' (default)' : ''}</li>`;
+                // Build files and columns list
+                let filesHtml = '';
+                if (catalog.files && catalog.files.length > 0) {
+                    filesHtml = '<ul class="option-list">';
+                    catalog.files.forEach(file => {
+                        const exists = file.exists !== false ? '✓' : '✗';
+                        filesHtml += `<li>${exists} ${file.name} (${file.type})</li>`;
                     });
-                    scoreOptionsHtml += '</ul>';
+                    filesHtml += '</ul>';
                 } else {
-                    scoreOptionsHtml = '<p style="color: #999; font-style: italic;">No score options available</p>';
+                    filesHtml = '<p style="color: #999; font-style: italic;">No files available</p>';
                 }
                 
-                // Build timeline options list
-                let timelineOptionsHtml = '';
-                if (catalog.timeline_options && catalog.timeline_options.length > 0) {
-                    timelineOptionsHtml = '<ul class="option-list">';
-                    catalog.timeline_options.forEach(option => {
-                        timelineOptionsHtml += `<li>${option.option_name}${option.is_default ? ' (default)' : ''}</li>`;
+                // Build columns list for all files
+                let columnsHtml = '';
+                if (catalog.files && catalog.files.length > 0) {
+                    columnsHtml = '<div class="files-columns">';
+                    catalog.files.forEach(file => {
+                        if (file.columns && file.columns.length > 0) {
+                            columnsHtml += `<div class="file-columns">`;
+                            columnsHtml += `<h6 style="margin: 8px 0 4px 0; color: #666; font-size: 12px;">${file.name} (${file.type})</h6>`;
+                            columnsHtml += '<ul class="option-list" style="margin-bottom: 12px;">';
+                            file.columns.forEach(col => {
+                                const typeBadge = `<span class="type-badge">${col.type}</span>`;
+                                columnsHtml += `<li>${typeBadge} <strong>${col.name}</strong></li>`;
+                            });
+                            columnsHtml += '</ul></div>';
+                        }
                     });
-                    timelineOptionsHtml += '</ul>';
-                } else {
-                    timelineOptionsHtml = '<p style="color: #999; font-style: italic;">No timeline options available</p>';
+                    columnsHtml += '</div>';
                 }
                 
                 html += `
                     <div class="catalog-item">
-                        <div class="catalog-header">
+                        <div class="catalog-header" onclick="toggleCatalog('${catalog.id}')">
                             <h3 class="catalog-title">${catalog.name}</h3>
                             <div class="catalog-meta">
                                 <strong>${recordCount}</strong> records | 
                                 <span style="color: #666;">${catalog.access_level}</span>
+                                <span class="toggle-icon" id="toggle-${catalog.id}">▼</span>
                             </div>
                         </div>
-                        <div class="catalog-description">${catalog.description || 'No description available'}</div>
-                        <div class="catalog-options">
-                            <div class="options-grid">
-                                <div class="option-group">
-                                    <h5>Score Options</h5>
-                                    ${scoreOptionsHtml}
-                                </div>
-                                <div class="option-group">
-                                    <h5>Timeline Options</h5>
-                                    ${timelineOptionsHtml}
+                        <div class="catalog-content" id="content-${catalog.id}" style="display: none;">
+                            <div class="catalog-description">${catalog.description || 'No description available'}</div>
+                            <div class="catalog-options">
+                                <div class="options-grid">
+                                    <div class="option-group">
+                                        <h5>Files</h5>
+                                        ${filesHtml}
+                                    </div>
+                                    <div class="option-group">
+                                        <h5>Columns</h5>
+                                        ${columnsHtml || '<p style="color: #999; font-style: italic;">No column information available</p>'}
+                                    </div>
                                 </div>
                             </div>
                         </div>

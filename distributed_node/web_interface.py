@@ -120,9 +120,8 @@ SIMPLE_WEB_INTERFACE = """
                     <label for="script_type">Script Type *</label>
                     <select id="script_type" name="script_type" required onchange="handleScriptTypeChange()">
                         <option value="">Select a script type...</option>
-                        <option value="demographics">Demographics Analysis</option>
-                        <option value="correlation">Correlation Analysis</option>
-                        <option value="damage_score">DBS Damage Score Analysis</option>
+                        <option value="demographics">Demographics</option>
+                        <option value="damage_score">DBS Damage Score</option>
                         <option value="custom">Custom Script</option>
                     </select>
                 </div>
@@ -328,7 +327,7 @@ save_results(result)</div>
         </div>
     </div>
 
-    <script src="/static/app.js?v=2"></script>
+    <script src="/static/app.js?v=4"></script>
 </body>
 </html>
 """

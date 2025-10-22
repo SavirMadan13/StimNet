@@ -150,7 +150,7 @@ async def list_data_catalogs(
     """List available data catalogs from manifest file"""
     try:
         # Try to read from manifest file first
-        manifest_path = Path("data/data_manifest.json")
+        manifest_path = Path("data/data_manifest_simple.json")
         
         if manifest_path.exists():
             with open(manifest_path, 'r') as f:
@@ -165,18 +165,51 @@ async def list_data_catalogs(
                 
                 for file_info in catalog.get('files', []):
                     file_path = Path(file_info['path'])
-                    if file_path.exists() and file_info['type'] == 'csv':
-                        # Count actual records
+                    if file_path.exists():
+                        # Count actual records and auto-detect columns
                         import pandas as pd
                         try:
-                            df = pd.read_csv(file_path)
-                            actual_count = len(df)
-                            total_records += actual_count
-                            files_info.append({
-                                **file_info,
-                                'actual_record_count': actual_count,
-                                'exists': True
-                            })
+                            if file_info['type'] == 'csv':
+                                df = pd.read_csv(file_path)
+                                actual_count = len(df)
+                                # Only count records from the first file (subjects) to get unique patient count
+                                if total_records == 0:
+                                    total_records = actual_count
+                                
+                                # Auto-detect columns if not already present
+                                if 'columns' not in file_info or not file_info['columns']:
+                                    columns = []
+                                    for col in df.columns:
+                                        dtype = str(df[col].dtype)
+                                        if dtype.startswith('int'):
+                                            col_type = 'int'
+                                        elif dtype.startswith('float'):
+                                            col_type = 'float'
+                                        elif dtype.startswith('bool'):
+                                            col_type = 'bool'
+                                        elif dtype.startswith('datetime'):
+                                            col_type = 'datetime'
+                                        else:
+                                            col_type = 'string'
+                                        
+                                        columns.append({
+                                            "name": col,
+                                            "type": col_type
+                                        })
+                                    
+                                    file_info['columns'] = columns
+                                
+                                files_info.append({
+                                    **file_info,
+                                    'actual_record_count': actual_count,
+                                    'exists': True
+                                })
+                            else:
+                                # For non-CSV files, just mark as existing
+                                files_info.append({
+                                    **file_info,
+                                    'exists': True
+                                })
                         except:
                             files_info.append({
                                 **file_info,
@@ -854,13 +887,76 @@ async def list_data_catalogs_with_options(
     """List data catalogs with their score/timeline options"""
     try:
         # Get catalogs from manifest
-        manifest_path = Path(__file__).parent.parent / "data" / "data_manifest_copy.json"
+        manifest_path = Path(__file__).parent.parent / "data" / "data_manifest_simple.json"
         with open(manifest_path, 'r') as f:
             manifest = json.load(f)
         
         catalogs_with_options = []
         
         for catalog_data in manifest.get("catalogs", []):
+            # Auto-detect columns for each file
+            enhanced_files = []
+            total_records = 0
+            
+            for file_info in catalog_data.get("files", []):
+                file_path = Path(file_info['path'])
+                if file_path.exists():
+                    # Count actual records and auto-detect columns
+                    import pandas as pd
+                    try:
+                        if file_info['type'] == 'csv':
+                            df = pd.read_csv(file_path)
+                            actual_count = len(df)
+                            # Only count records from the first file (subjects) to get unique patient count
+                            if total_records == 0:
+                                total_records = actual_count
+                            
+                            # Auto-detect columns if not already present
+                            if 'columns' not in file_info or not file_info['columns']:
+                                columns = []
+                                for col in df.columns:
+                                    dtype = str(df[col].dtype)
+                                    if dtype.startswith('int'):
+                                        col_type = 'int'
+                                    elif dtype.startswith('float'):
+                                        col_type = 'float'
+                                    elif dtype.startswith('bool'):
+                                        col_type = 'bool'
+                                    elif dtype.startswith('datetime'):
+                                        col_type = 'datetime'
+                                    else:
+                                        col_type = 'string'
+                                    
+                                    columns.append({
+                                        "name": col,
+                                        "type": col_type
+                                    })
+                                
+                                file_info['columns'] = columns
+                            
+                            enhanced_files.append({
+                                **file_info,
+                                'actual_record_count': actual_count,
+                                'exists': True
+                            })
+                        else:
+                            # For non-CSV files, just mark as existing
+                            enhanced_files.append({
+                                **file_info,
+                                'exists': True
+                            })
+                    except Exception as e:
+                        enhanced_files.append({
+                            **file_info,
+                            'exists': False,
+                            'error': str(e)
+                        })
+                else:
+                    enhanced_files.append({
+                        **file_info,
+                        'exists': False
+                    })
+            
             # Get score/timeline options from database
             options = db.query(ScoreTimelineOption).filter(
                 ScoreTimelineOption.data_catalog_id == catalog_data["id"],
@@ -883,11 +979,11 @@ async def list_data_catalogs_with_options(
                 name=catalog_data["name"],
                 description=catalog_data.get("description", ""),
                 data_type=catalog_data.get("data_type", "tabular"),
-                schema_definition={"files": catalog_data.get("files", [])},
+                schema_definition={"files": enhanced_files},
                 access_level=catalog_data.get("privacy_level", "public"),
-                total_records=sum(file.get("record_count", 0) for file in catalog_data.get("files", [])),
+                total_records=total_records,
                 last_updated=datetime.now(),
-                files=catalog_data.get("files", []),
+                files=enhanced_files,
                 score_options=score_options,
                 timeline_options=timeline_options
             )
