@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 
-def load_data() -> Dict[str, Any]:
+def load_data(file_name: str = None) -> Any:
     """
     Load all data files from the selected catalog and any uploaded files.
     
@@ -43,7 +43,7 @@ def load_data() -> Dict[str, Any]:
     # Job directory structure: project_root/work/job_id/data_loader.py
     # So we need to go up 3 levels to get to project_root
     project_root = Path(__file__).parent.parent.parent
-    manifest_path = project_root / "data" / "data_manifest.json"
+    manifest_path = project_root / "data" / "data_manifest_simple.json"
     if not manifest_path.exists():
         raise ValueError(f"Data manifest not found at {manifest_path}")
     
@@ -132,31 +132,45 @@ def load_data() -> Dict[str, Any]:
                     continue
                 
                 # Load the file based on type
-                file_path = Path(file_info['path'])
+                # Resolve path relative to project root (same as catalog files)
+                file_path = project_root / file_info['path']
                 file_type = file_info['type']
-                file_name = f"uploaded_{Path(file_info['filename']).stem}"
+                uploaded_file_name = f"uploaded_{Path(file_info['filename']).stem}"
+                
+                if not file_path.exists():
+                    print(f"Warning: Uploaded file {file_path} not found, skipping...")
+                    continue
                 
                 if file_type in ['csv', 'tsv']:
                     try:
                         df = pd.read_csv(file_path, sep='\t' if file_type == 'tsv' else ',')
-                        data[file_name] = df
-                        print(f"✓ Loaded uploaded file: {file_name} ({len(df)} rows)")
+                        data[uploaded_file_name] = df
+                        print(f"✓ Loaded uploaded file: {uploaded_file_name} ({len(df)} rows)")
                     except Exception as e:
-                        print(f"Error loading uploaded file {file_name}: {e}")
+                        print(f"Error loading uploaded file {uploaded_file_name}: {e}")
                 elif file_type in ['nii', 'nii.gz', 'nifti']:
                     try:
                         import nibabel as nib
                         img = nib.load(file_path)
-                        data[file_name] = img
-                        print(f"✓ Loaded uploaded file: {file_name} ({img.shape} volume)")
+                        data[uploaded_file_name] = img
+                        # Also add as 'uploaded_connectivity_map' for easy access
+                        data['uploaded_connectivity_map'] = img
+                        print(f"✓ Loaded uploaded file: {uploaded_file_name} ({img.shape} volume)")
                     except ImportError:
-                        print(f"Warning: nibabel not installed. Cannot load {file_name}")
+                        print(f"Warning: nibabel not installed. Cannot load {uploaded_file_name}")
                     except Exception as e:
-                        print(f"Error loading uploaded file {file_name}: {e}")
+                        print(f"Error loading uploaded file {uploaded_file_name}: {e}")
                 else:
-                    print(f"Warning: Unsupported uploaded file type '{file_type}' for {file_name}")
+                    print(f"Warning: Unsupported uploaded file type '{file_type}' for {uploaded_file_name}")
         
         print(f"\n✓ Successfully loaded {len(uploaded_file_ids)} uploaded file(s)")
+    
+    # If a specific file is requested, return just that file
+    if file_name:
+        if file_name in data:
+            return data[file_name]
+        else:
+            raise ValueError(f"File '{file_name}' not found in loaded data. Available files: {list(data.keys())}")
     
     return data
 
@@ -189,7 +203,7 @@ def get_catalog_info() -> Dict[str, Any]:
     # Read manifest
     # Use absolute path to project root (go up 3 levels from job directory to project root)
     project_root = Path(__file__).parent.parent.parent
-    manifest_path = project_root / "data" / "data_manifest.json"
+    manifest_path = project_root / "data" / "data_manifest_simple.json"
     if not manifest_path.exists():
         raise ValueError(f"Data manifest not found at {manifest_path}")
     

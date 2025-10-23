@@ -327,7 +327,7 @@ save_results(result)</div>
         </div>
     </div>
 
-    <script src="/static/app.js?v=5"></script>
+    <script src="/static/app.js?v=19"></script>
 </body>
 </html>
 """

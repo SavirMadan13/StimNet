@@ -268,90 +268,109 @@ def _execute_job_sync(job_id: int):
     """Execute job synchronously in background thread"""
     from .database import SessionLocal
     
-    db = SessionLocal()
-    job = None
-    try:
-        job = db.query(Job).filter(Job.id == job_id).first()
-        if not job:
-            logger.error(f"Job {job_id} not found")
-            return
-        
-        logger.info(f"🚀 Starting REAL execution of job {job.job_id}")
-        
-        # Update job status
-        job.status = JobStatus.RUNNING
-        job.started_at = datetime.utcnow()
+    def update_job_status(status, error_message=None, result_data=None, execution_time=None, records_processed=None):
+        """Update job status with a fresh database session"""
+        db = SessionLocal()
         try:
-            db.commit()
+            job = db.query(Job).filter(Job.id == job_id).first()
+            if job:
+                job.status = status
+                if error_message:
+                    job.error_message = error_message
+                if result_data is not None:
+                    job.result_data = result_data
+                if execution_time is not None:
+                    job.execution_time = execution_time
+                if records_processed is not None:
+                    job.records_processed = records_processed
+                if status in [JobStatus.RUNNING, JobStatus.COMPLETED, JobStatus.FAILED]:
+                    if status == JobStatus.RUNNING:
+                        job.started_at = datetime.utcnow()
+                    else:
+                        job.completed_at = datetime.utcnow()
+                db.commit()
+                logger.info(f"✅ Job {job.job_id} status updated to {status}")
+            else:
+                logger.error(f"Job {job_id} not found for status update")
         except Exception as e:
-            logger.error(f"Error committing job status update: {e}")
-            db.rollback()
-            return
+            logger.error(f"Error updating job status to {status}: {e}")
+            try:
+                db.rollback()
+            except Exception as rollback_error:
+                logger.error(f"Error during rollback: {rollback_error}")
+        finally:
+            try:
+                db.close()
+            except Exception as e:
+                logger.error(f"Error closing database session: {e}")
+    
+    try:
+        # Get job details with fresh session
+        db = SessionLocal()
+        try:
+            job = db.query(Job).filter(Job.id == job_id).first()
+            if not job:
+                logger.error(f"Job {job_id} not found")
+                return
+            job_id_str = job.job_id
+            script_content = job.script_content
+            script_type = job.script_type
+            parameters = job.parameters
+            filters = job.filters
+            data_catalog_id = job.data_catalog_id
+            uploaded_file_ids = job.uploaded_file_ids or []
+        finally:
+            db.close()
+        
+        logger.info(f"🚀 Starting REAL execution of job {job_id_str}")
+        
+        # Update job status to RUNNING with fresh session
+        update_job_status(JobStatus.RUNNING)
         
         # Validate script security
-        security_check = script_executor.validate_script_security(job.script_content, job.script_type)
+        security_check = script_executor.validate_script_security(script_content, script_type)
         
         if not security_check["is_safe"]:
-            logger.warning(f"Script security validation failed for job {job.job_id}: {security_check['warnings']}")
-            job.status = JobStatus.FAILED
-            job.error_message = f"Script failed security validation: {security_check['warnings']}"
-            job.completed_at = datetime.utcnow()
-            try:
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error committing security validation failure: {e}")
-                db.rollback()
+            logger.warning(f"Script security validation failed for job {job_id_str}: {security_check['warnings']}")
+            update_job_status(JobStatus.FAILED, f"Script failed security validation: {security_check['warnings']}")
             return
         
         if security_check["warnings"]:
-            logger.warning(f"Script security warnings for job {job.job_id}: {security_check['warnings']}")
+            logger.warning(f"Script security warnings for job {job_id_str}: {security_check['warnings']}")
         
         # Execute the script with REAL execution
         logger.info(f"⚡ Executing script with real data processing...")
         
         execution_result = script_executor.execute_script(
-            script_content=job.script_content,
-            script_type=job.script_type,
-            job_id=job.job_id,
-            parameters=job.parameters,
-            filters=job.filters,
-            data_catalog_id=job.data_catalog_id,
-            uploaded_file_ids=job.uploaded_file_ids or []
+            script_content=script_content,
+            script_type=script_type,
+            job_id=job_id_str,
+            parameters=parameters,
+            filters=filters,
+            data_catalog_id=data_catalog_id,
+            uploaded_file_ids=uploaded_file_ids
         )
         
-        # Update job with results
+        # Update job with results using fresh session
         if execution_result["success"]:
-            job.status = JobStatus.COMPLETED
-            job.result_data = execution_result["data"]
-            job.execution_time = execution_result["execution_time"]
-            job.records_processed = execution_result.get("records_processed", 0)
-            logger.info(f"✅ Job {job.job_id} completed successfully in {execution_result['execution_time']:.2f}s")
+            update_job_status(
+                JobStatus.COMPLETED,
+                result_data=execution_result["data"],
+                execution_time=execution_result["execution_time"],
+                records_processed=execution_result.get("records_processed", 0)
+            )
+            logger.info(f"✅ Job {job_id_str} completed successfully in {execution_result['execution_time']:.2f}s")
         else:
-            job.status = JobStatus.FAILED
-            job.error_message = execution_result["error"]
-            job.result_data = execution_result.get("data", {})
-            logger.error(f"❌ Job {job.job_id} failed: {execution_result['error']}")
-        
-        job.completed_at = datetime.utcnow()
-        try:
-            db.commit()
-        except Exception as e:
-            logger.error(f"Error committing job completion: {e}")
-            db.rollback()
+            update_job_status(
+                JobStatus.FAILED,
+                error_message=execution_result["error"],
+                result_data=execution_result.get("data", {})
+            )
+            logger.error(f"❌ Job {job_id_str} failed: {execution_result['error']}")
         
     except Exception as e:
         logger.error(f"Error executing job {job_id}: {e}")
-        if job:
-            try:
-                job.status = JobStatus.FAILED
-                job.error_message = str(e)
-                job.completed_at = datetime.utcnow()
-                db.commit()
-            except Exception as commit_error:
-                logger.error(f"Error committing job failure: {commit_error}")
-                db.rollback()
-    finally:
-        db.close()
+        update_job_status(JobStatus.FAILED, str(e))
 
 
 # Job submission and management (REAL EXECUTION)
@@ -416,7 +435,7 @@ async def submit_job(
     
     # Execute job in background thread (REAL EXECUTION)
     logger.info(f"🚀 Queuing job {job_id} for REAL execution")
-    thread = threading.Thread(target=_execute_job_sync, args=(job.id,), daemon=True)
+    thread = threading.Thread(target=_execute_job_sync, args=(job.id,), daemon=False, name=f"JobExecutor-{job.id}")
     thread.start()
     
     return JobSubmissionResponse(
@@ -713,6 +732,7 @@ async def create_analysis_request(
             script_content=request.script_content,
             parameters=request.parameters or {},
             filters=request.filters or {},
+            uploaded_file_ids=request.uploaded_file_ids or [],
             priority=request.priority,
             estimated_duration=request.estimated_duration,
             status=RequestStatus.PENDING
@@ -826,10 +846,13 @@ async def update_analysis_request(
     
     # If approved, create a job
     if update.status == RequestStatus.APPROVED:
-        # Find target node
+        # Find target node, fallback to default node if not found
         target_node = db.query(Node).filter(Node.node_id == request.target_node_id).first()
         if not target_node:
-            raise HTTPException(status_code=404, detail="Target node not found")
+            # Fallback to default node for backward compatibility
+            target_node = db.query(Node).filter(Node.node_id == "default-node").first()
+            if not target_node:
+                raise HTTPException(status_code=404, detail="Target node not found and no default node available")
         
         # Create job
         job_id = str(uuid.uuid4())
@@ -846,6 +869,7 @@ async def update_analysis_request(
             script_hash=script_hash,
             parameters=request.parameters or {},
             filters=request.filters or {},
+            uploaded_file_ids=request.uploaded_file_ids or [],
             status=JobStatus.QUEUED
         )
         
@@ -855,7 +879,7 @@ async def update_analysis_request(
         
         # Execute job in background thread (REAL EXECUTION)
         logger.info(f"🚀 Queuing approved job {job_id} for REAL execution")
-        thread = threading.Thread(target=_execute_job_sync, args=(job.id,), daemon=True)
+        thread = threading.Thread(target=_execute_job_sync, args=(job.id,), daemon=False, name=f"JobExecutor-{job.id}")
         thread.start()
     
     db.commit()

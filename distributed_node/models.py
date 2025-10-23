@@ -157,6 +157,7 @@ class AnalysisRequest(Base):
     script_content = Column(Text, nullable=False)
     parameters = Column(JSON)
     filters = Column(JSON)
+    uploaded_file_ids = Column(JSON, default=[])  # IDs of uploaded files to use
     
     # Request management
     status = Column(String(50), default=RequestStatus.PENDING)
@@ -312,6 +313,7 @@ class AnalysisRequestCreate(BaseModel):
     script_content: str
     parameters: Optional[Dict[str, Any]] = None
     filters: Optional[Dict[str, Any]] = None
+    uploaded_file_ids: Optional[List[str]] = None
     priority: str = "normal"
     estimated_duration: Optional[str] = None
 
