@@ -1,84 +1,207 @@
-# StimNet
-A minimal, production-leaning scaffold for a **model-to-data** site node. Requesters POST a connectivity map (NIfTI) and get back **aggregate stats only** (n, R, p). No patient-level data leaves the institution.
+# StimNet Research Platform
 
-## What’s inside
-```
-site-node-starter/
-├─ README.md
-├─ requirements.txt
-├─ docker-compose.yml              # optional helper to run uvicorn + nginx
-├─ .env.example                    # environment overrides
-├─ site_app/
-│  └─ main.py                      # FastAPI: /healthz, /catalog/variables, /jobs, /jobs/{id}
-├─ worker/
-│  ├─ Dockerfile                   # sandboxed analysis image
-│  └─ run_job.py                   # map × subject connectivity → score → R vs outcome
-├─ nginx/
-│  └─ site.conf                    # reverse proxy + TLS (and optional mTLS)
-├─ data/
-│  └─ read_only/                   # curated, de-identified views (mounted read-only)
-│     ├─ subjects.csv              # subject_id, dx, age, sex, visit, ...
-│     ├─ outcomes.csv              # subject_id, visit, outcomes...
-│     ├─ paths.csv                 # subject_id, visit, conn_path (absolute path to subj NIfTI on this machine)
-│     └─ masks/                    # optional ROI masks (e.g., STN.nii.gz)
-└─ var/
-   └─ site_jobs/                   # temp workspace for uploads/results
-```
+A distributed data access and remote execution framework for secure, privacy-preserving collaborative research across multiple institutions.
 
-## Quick start (local demo)
-1) **Python deps**
-```
+## Overview
+
+StimNet enables researchers to:
+- **Securely share data** across institutions without moving raw data
+- **Execute remote analysis scripts** in sandboxed environments
+- **Enforce privacy controls** (minimum cohort sizes, aggregation only)
+- **Provide audit trails** for all operations
+- **Scale horizontally** across multiple nodes/institutions
+
+## Quick Start
+
+### 1. Install Dependencies
+```bash
 pip install -r requirements.txt
 ```
-2) **Build the worker image**
-```
-cd worker
-docker build -t map-runner:latest .
-```
-3) **Run the FastAPI app (dev)**
-```
-uvicorn site_app.main:app --host 127.0.0.1 --port 8000
-```
-4) **(Optional) Run Nginx reverse proxy**  
-Populate TLS certs (self-signed is fine for local), then:
-```
-docker compose up -d nginx
-```
-or use your host Nginx with `nginx/site.conf`.
 
-## Endpoints
-- `GET /healthz` → liveness
-- `GET /catalog/variables` → safe metadata (template, variables, outcomes, N)
-- `POST /jobs` (multipart) → upload `map_file` and fields: `task`, `outcome`, `stat`, `mask`, `filters`
-- `GET /jobs/{id}` → status or `{n, R, p}` (blocked if n < K_MIN)
-
-### Example (submit job)
-```
-curl -k -X POST https://localhost/jobs   -F 'map_file=@/absolute/path/to/map.nii.gz'   -F 'task=map_to_outcome_v1'   -F 'outcome=UPDRS_change'   -F 'stat=pearson'   -F 'mask=STN'   -F 'filters={"dx":"PD","visit":"6mo"}'
+### 2. Start the Server
+```bash
+python run_server.py
 ```
 
-### Poll
+### 3. Access the Web Interface
+- **Local**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+
+## Project Structure
+
 ```
-curl -k https://localhost/jobs/<JOB_ID>
+StimNet/
+├── README.md                    # This file
+├── requirements.txt             # Python dependencies
+├── run_server.py               # Main server entry point
+├── launch.sh                   # Advanced startup script
+├── distributed_node/           # Core application
+│   ├── real_main.py           # Main FastAPI application
+│   ├── config.py              # Configuration settings
+│   ├── database.py            # Database models and setup
+│   ├── models.py              # Pydantic models
+│   ├── security.py            # Authentication and security
+│   ├── real_executor.py       # Script execution engine
+│   ├── web_interface.py       # Web UI components
+│   └── static/                # Web assets
+├── client_sdk/                # Python client library
+│   ├── client.py              # Main client class
+│   └── models.py              # Client models
+├── examples/                  # Example scripts and demos
+├── data/                      # Data catalogs and manifests
+├── docker/                    # Docker execution environments
+└── nginx/                     # Nginx configuration
 ```
 
-> Use `-k` to allow self-signed TLS locally. For real deployments, use proper certs (Let’s Encrypt) and consider **mTLS** (client certs).
+## Key Features
 
-## Data view expectations
-Place **de-identified** site-controlled views here: `data/read_only/`
-- `subjects.csv`: columns `subject_id, visit, dx, age, sex, ...`
-- `outcomes.csv`: columns `subject_id, visit, UPDRS_change, YBOCS_change, ...`
-- `paths.csv`: columns `subject_id, visit, conn_path` (absolute path to per-subject NIfTI, all in same template as map)
-- `masks/*.nii.gz`: optional ROI masks (e.g., `STN.nii.gz`).
+### 🔒 **Security & Privacy**
+- Script validation and sandboxed execution
+- Minimum cohort size enforcement
+- Data aggregation only (no raw data leaves the institution)
+- Complete audit trails
+- JWT-based authentication
 
-## Privacy guardrails
-- Minimum cohort size `K_MIN` enforced before returning results.
-- Worker container runs with `--network=none` and `/data:ro` mounts.
-- Outputs rounded to 3 decimals; you can add DP noise if desired.
+### 🚀 **Easy to Use**
+- Web-based interface for non-technical users
+- Python SDK for developers
+- RESTful API for integration
+- Pre-built analysis examples
 
-## Production notes
-- Put uvicorn behind Nginx (TLS/mTLS), enable rate limiting & access logs.
-- Replace the thread runner with a queue (Redis/RQ or Celery) for scale.
-- Store jobs/results in Postgres instead of in-memory dict.
-- Verify allowlisted images (e.g., cosign) before `docker run`.
-- Lock Docker down with seccomp/apparmor profiles and CPU/mem limits.
+### 📊 **Data Management**
+- Multiple data catalog support
+- Automatic data loading
+- File upload capabilities
+- Metadata management
+
+### 🔧 **Flexible Execution**
+- Python and R script support
+- Docker-based sandboxing
+- Resource limits and timeouts
+- Background job processing
+
+## Usage
+
+### Web Interface
+1. Visit http://localhost:8000
+2. Select a dataset from the dropdown
+3. Write or load an example analysis script
+4. Click "Run Analysis" to execute
+5. View results in real-time
+
+### Python SDK
+```python
+import asyncio
+from client_sdk import DistributedClient, JobSubmission
+
+async def run_analysis():
+    async with DistributedClient("http://localhost:8000") as client:
+        # Authenticate
+        await client.authenticate("demo", "demo")
+        
+        # Submit analysis
+        job_id = await client.submit_job(JobSubmission(
+            target_node_id="node-1",
+            data_catalog_name="clinical_trial_data",
+            script_type="python",
+            script_content="""
+import pandas as pd
+from data_loader import load_data, save_results
+
+# Load data
+data = load_data()
+subjects = data['subjects']
+
+# Analysis
+result = {
+    "total_subjects": len(subjects),
+    "mean_age": float(subjects['age'].mean())
+}
+
+# Save results
+save_results(result)
+""",
+            parameters={"analysis_type": "demographics"}
+        ))
+        
+        # Wait for results
+        result = await client.wait_for_job(job_id)
+        print(f"Results: {result.result_data}")
+
+asyncio.run(run_analysis())
+```
+
+## API Endpoints
+
+- `GET /health` - Health check
+- `GET /api/v1/discovery` - Node discovery
+- `GET /api/v1/data-catalogs` - List available datasets
+- `POST /api/v1/jobs` - Submit analysis job
+- `GET /api/v1/jobs/{job_id}` - Get job status/results
+- `POST /api/v1/analysis-requests` - Submit analysis request
+- `GET /admin` - Admin interface
+
+## Configuration
+
+The application can be configured via environment variables:
+
+```bash
+# Node Configuration
+NODE_ID=node-1
+NODE_NAME=My Research Node
+INSTITUTION_NAME=My Institution
+
+# Security
+SECRET_KEY=your-secret-key
+
+# Database
+DATABASE_URL=sqlite:///./distributed_node.db
+
+# Data settings
+DATA_ROOT=./data
+WORK_DIR=./work
+MIN_COHORT_SIZE=5
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+## Development
+
+### Running in Development Mode
+```bash
+# Start with auto-reload
+python run_server.py
+
+# Or use the advanced launcher
+./launch.sh --dev
+```
+
+### Adding New Data Catalogs
+1. Add your data files to `data/catalogs/your_dataset/`
+2. Update `data/data_manifest_simple.json`
+3. Restart the server
+
+### Custom Analysis Scripts
+Place your analysis scripts in `analysis_scripts/` and reference them in the web interface or API calls.
+
+## Production Deployment
+
+For production deployment:
+1. Set up PostgreSQL database
+2. Configure TLS/SSL certificates
+3. Set up proper authentication
+4. Configure monitoring and logging
+5. Use the provided Docker containers for script execution
+
+## Support
+
+- **Documentation**: See individual guide files in the repository
+- **API Docs**: Visit `/docs` endpoint when server is running
+- **Health Check**: Visit `/health` endpoint
+- **Examples**: Check the `examples/` directory
+
+## License
+
+This project is designed for research and educational purposes. Please ensure compliance with your institution's data sharing policies and applicable regulations.
