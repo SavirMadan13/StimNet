@@ -58,7 +58,14 @@ async function loadDataCatalogs() {
                             columnsHtml += '<ul class="option-list" style="margin-bottom: 12px;">';
                             file.columns.forEach(col => {
                                 const typeBadge = `<span class="type-badge">${col.type}</span>`;
-                                columnsHtml += `<li>${typeBadge} <strong>${col.name}</strong></li>`;
+                                let displayText = `<strong>${col.name}</strong>`;
+                                
+                                // Show constant value if available
+                                if (col.constant_value !== undefined) {
+                                    displayText += ` <span style="color: #28a745; font-weight: normal;">= "${col.constant_value}"</span>`;
+                                }
+                                
+                                columnsHtml += `<li>${typeBadge} ${displayText}</li>`;
                             });
                             columnsHtml += '</ul></div>';
                         }

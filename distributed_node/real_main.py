@@ -35,6 +35,45 @@ from .security import create_access_token
 from .real_executor import RealScriptExecutor
 from .web_interface import get_web_interface_html
 
+def detect_column_info(series):
+    """
+    Detect column type and constant value if applicable.
+    
+    Args:
+        series: pandas Series
+        
+    Returns:
+        dict with 'type' and optionally 'constant_value'
+    """
+    import pandas as pd
+    
+    dtype = str(series.dtype)
+    
+    # Determine base type
+    if dtype.startswith('int'):
+        col_type = 'int'
+    elif dtype.startswith('float'):
+        col_type = 'float'
+    elif dtype.startswith('bool'):
+        col_type = 'bool'
+    elif dtype.startswith('datetime'):
+        col_type = 'datetime'
+    else:
+        col_type = 'string'
+    
+    # Check if all values are the same (constant column)
+    if len(series) > 0:
+        unique_values = series.unique()
+        if len(unique_values) == 1:
+            constant_value = unique_values[0]
+            # Convert to string for display, handle NaN
+            if pd.isna(constant_value):
+                return {"type": col_type, "constant_value": "N/A"}
+            else:
+                return {"type": col_type, "constant_value": str(constant_value)}
+    
+    return {"type": col_type}
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
@@ -180,22 +219,16 @@ async def list_data_catalogs(
                                 if 'columns' not in file_info or not file_info['columns']:
                                     columns = []
                                     for col in df.columns:
-                                        dtype = str(df[col].dtype)
-                                        if dtype.startswith('int'):
-                                            col_type = 'int'
-                                        elif dtype.startswith('float'):
-                                            col_type = 'float'
-                                        elif dtype.startswith('bool'):
-                                            col_type = 'bool'
-                                        elif dtype.startswith('datetime'):
-                                            col_type = 'datetime'
-                                        else:
-                                            col_type = 'string'
-                                        
-                                        columns.append({
+                                        col_info = detect_column_info(df[col])
+                                        column_data = {
                                             "name": col,
-                                            "type": col_type
-                                        })
+                                            "type": col_info["type"]
+                                        }
+                                        # Add constant value if detected
+                                        if "constant_value" in col_info:
+                                            column_data["constant_value"] = col_info["constant_value"]
+                                        
+                                        columns.append(column_data)
                                     
                                     file_info['columns'] = columns
                                 
@@ -992,11 +1025,13 @@ async def list_data_catalogs_with_options(
             
             for file_info in catalog_data.get("files", []):
                 file_path = Path(file_info['path'])
+                logger.info(f"Processing file: {file_path} - exists: {file_path.exists()}")
                 if file_path.exists():
                     # Count actual records and auto-detect columns
                     import pandas as pd
-                    try:
-                        if file_info['type'] == 'csv':
+                    if file_info['type'] == 'csv':
+                        logger.info(f"Reading CSV file: {file_path}")
+                        try:
                             df = pd.read_csv(file_path)
                             actual_count = len(df)
                             # Only count records from the first file (subjects) to get unique patient count
@@ -1007,22 +1042,16 @@ async def list_data_catalogs_with_options(
                             if 'columns' not in file_info or not file_info['columns']:
                                 columns = []
                                 for col in df.columns:
-                                    dtype = str(df[col].dtype)
-                                    if dtype.startswith('int'):
-                                        col_type = 'int'
-                                    elif dtype.startswith('float'):
-                                        col_type = 'float'
-                                    elif dtype.startswith('bool'):
-                                        col_type = 'bool'
-                                    elif dtype.startswith('datetime'):
-                                        col_type = 'datetime'
-                                    else:
-                                        col_type = 'string'
-                                    
-                                    columns.append({
+                                    col_info = detect_column_info(df[col])
+                                    column_data = {
                                         "name": col,
-                                        "type": col_type
-                                    })
+                                        "type": col_info["type"]
+                                    }
+                                    # Add constant value if detected
+                                    if "constant_value" in col_info:
+                                        column_data["constant_value"] = col_info["constant_value"]
+                                    
+                                    columns.append(column_data)
                                 
                                 file_info['columns'] = columns
                             
@@ -1031,19 +1060,21 @@ async def list_data_catalogs_with_options(
                                 'actual_record_count': actual_count,
                                 'exists': True
                             })
-                        else:
-                            # For non-CSV files, just mark as existing
+                        except Exception as e:
+                            logger.error(f"Error processing CSV file {file_path}: {e}")
                             enhanced_files.append({
                                 **file_info,
-                                'exists': True
+                                'exists': False,
+                                'error': str(e)
                             })
-                    except Exception as e:
+                    else:
+                        # For non-CSV files, just mark as existing
                         enhanced_files.append({
                             **file_info,
-                            'exists': False,
-                            'error': str(e)
+                            'exists': True
                         })
                 else:
+                    # File doesn't exist
                     enhanced_files.append({
                         **file_info,
                         'exists': False
